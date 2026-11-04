@@ -44,3 +44,14 @@ Source: VantaHouse_Intro_B_ColdOpen_1080x1920.mp4 (uploaded). `G_cut.py` reorder
 
 ## Openings A/B/C (4 Nov 2026) from John's cold-open clip
 A documentary (walk-in slot is a placeholder card until the clip arrives; J-cut voice over two real site photos; MUSIC + VOICEONLY versions), B cold open (very close, crescendo, 1 s silence, small title, dark end), C proof open (NO RENDERS. / NO AI. over real site photos, then his line, Modern Clean end). John says "10 years" (confirmed by Abdullahi); G captions fixed.
+
+## Openings A/B/C v2 (4 Nov 2026), with the B2 cutaways, Sarah and plans
+Source: VantaHouse_Intro_B2_Cutaways_1080x1920.mp4 (same clock as the cold open, with cutaways). No WhatsApp number anywhere; every version ends on just VANTA HOUSE / Naguru, Kampala.
+| files | what it is |
+|---|---|
+| `ABC_v2_render.py` | A documentary (cutaway montage + trend text, hook close-up, J-cut over site photos, Sarah's closing line over the plan drawings, "PLAN DRAWING · MAY CHANGE"), B cold open (very close hook, 1 s silence, John over cutaways, Sarah "100 boutique homes" over plans, dark end), C proof open (NO RENDERS. / REAL SITE. with Sarah over real site photos; "NO AI" dropped because Sarah is an AI voice; John's hook with laptop cutaway, light end). |
+| `ABC_v2_compose_scores.py` | three original scores (FluidSynth). |
+| `ABC_v2_mix.py` | renders each voice piece to its own file (a single multi-seek graph cut A short), levels Sarah to John, ducks music 17 dB under voice, B's 1 s silence, −14 LUFS. |
+
+## Video M (4 Nov 2026): a longer version of MyEdit_B_own
+`M_render_slowglide.py` + `M_final.sh`: 11.9 s, the MyEdit_B look (motion-interpolated slow motion, same grade/vignette/grain, teal bar, Inter titles, ambient pad): John at his desk (B2 cutaway, slowed 2.4x) "10 YEARS IN BANKING / NOW BUILDING IN KAMPALA" → slow pan across the real site slab "100 BOUTIQUE HOMES / RISING IN NAGURU" → push into rebar and skyline "VANTA HOUSE / NAGURU, KAMPALA". Original numpy pad (Am9 → Fmaj7 → Cadd9), whooshes into cuts, soft low hit under the title.
