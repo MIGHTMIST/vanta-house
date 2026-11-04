@@ -19,3 +19,5 @@ A needs the Motion Explainer Kit (render.py, kin2.py, motion_v3.py, fonts) and r
 | `C_mix.py` | same music, fewer and softer SFX, a gentle riser into the end card, −14 LUFS |
 | `C_style_board.py` | before/after sheet from real frames of videos A and C |
 Fonts come from npm (@fontsource/cormorant-garamond, @fontsource/jost, both SIL Open Font License).
+
+`C_style_options.py` renders four style options as stills (hook frame + end card): 1 Vanta Black, 2 Ivory Classic (Libre Caslon), 3 Modern Clean (Montserrat), 4 Emerald & Brass (Playfair Display). Extra fonts from npm: @fontsource/montserrat, @fontsource/playfair-display.
