@@ -38,3 +38,6 @@ Fonts come from npm (@fontsource/cormorant-garamond, @fontsource/jost, both SIL 
 | `EF_mix.py` | scores + synthesized camera shutter on each print (E) / soft whooshes on the wipes (F), −14 LUFS. |
 | `EF_common.py` | shared helpers (fonts, crops, prints, pills, wipes). |
 The man in the teal shirt is cropped out of E and F until he is cleared to appear.
+
+## Video G (4 Nov 2026): John cold open re-edit
+Source: VantaHouse_Intro_B_ColdOpen_1080x1920.mp4 (uploaded). `G_cut.py` reorders (hook "After ... years in China's investment banking" first), tightens pauses, punch-ins on jump cuts, Vanta grade, voice clean-up. `G_render.py` adds the hook text, 2-4 word captions of his words, BLACKSTONE / VANTA HOUSE chips and the Modern Clean end card. `G_compose_score.py` original bed at 81.1 BPM (end card on bar 11); `G_mix.py` ducks it ~17 dB under his voice, -14 LUFS.
