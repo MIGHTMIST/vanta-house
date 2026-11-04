@@ -16,7 +16,7 @@ def out_t(i):
     for a, b, t0 in SEGS:
         if a - 0.05 <= w < b: return t0 + max(0, w - a)
     raise ValueError(i)
-CHUNKS = [(24, 'After two years'), (27, "in China's investment"), (30, 'banking industry,'), (32, 'I saw significant'), (35, 'opportunities'),
+CHUNKS = [(24, 'After 10 years'), (27, "in China's investment"), (30, 'banking industry,'), (32, 'I saw significant'), (35, 'opportunities'),
           (36, "in Africa's"), (38, 'real estate market.'), (41, 'I founded Blackstone'), (44, 'to bring professional'), (47, 'investment analysis'),
           (49, 'to build'), (51, 'trusted development,'), (53, 'deliver lasting value'), (56, 'and grow'), (58, 'alongside Uganda.'),
           (0, 'Our immediate priority'), (3, 'is to successfully'), (6, 'deliver'), (7, 'Vanta House'), (9, 'in our flagship'),

@@ -41,3 +41,6 @@ The man in the teal shirt is cropped out of E and F until he is cleared to appea
 
 ## Video G (4 Nov 2026): John cold open re-edit
 Source: VantaHouse_Intro_B_ColdOpen_1080x1920.mp4 (uploaded). `G_cut.py` reorders (hook "After ... years in China's investment banking" first), tightens pauses, punch-ins on jump cuts, Vanta grade, voice clean-up. `G_render.py` adds the hook text, 2-4 word captions of his words, BLACKSTONE / VANTA HOUSE chips and the Modern Clean end card. `G_compose_score.py` original bed at 81.1 BPM (end card on bar 11); `G_mix.py` ducks it ~17 dB under his voice, -14 LUFS.
+
+## Openings A/B/C (4 Nov 2026) from John's cold-open clip
+A documentary (walk-in slot is a placeholder card until the clip arrives; J-cut voice over two real site photos; MUSIC + VOICEONLY versions), B cold open (very close, crescendo, 1 s silence, small title, dark end), C proof open (NO RENDERS. / NO AI. over real site photos, then his line, Modern Clean end). John says "10 years" (confirmed by Abdullahi); G captions fixed.
