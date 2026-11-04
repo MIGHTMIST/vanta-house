@@ -12,7 +12,8 @@ there but I did not run it. Every bot reads this before promising anything.
 | Vanta Team Room + old Lab board (read/write rows) | checked | orders, status cards, log, John questions |
 | Cloudflare: list workers, read bot code, query the bot database (D1) | checked (workers list) | reading chats and leads, finding bot bugs, writing new bot versions |
 | Google Drive | checked ("100 books" folder) | reading playbooks, saving papers |
-| Google Docs, Sheets, Slides, Gmail, Calendar | connected, not tested | packs, trackers, family books data, email drafts, calendar |
+| Google Docs, Sheets, Slides, Calendar | connected, not tested |
+| Gmail | needs a new sign-in (auth error, 4 Nov): reconnect it in claude.ai connector settings | packs, trackers, family books data, email drafts, calendar |
 | Canva, fal.ai, Higgsfield connectors | connected, not tested (they cost credits) | designs, AI images and video |
 | Video and image work: ffmpeg, ImageMagick, Python, Node, headless Chrome (for code-made videos and HTML → PDF) | checked (installed) | reels, ads, motion graphics, PDFs |
 | Web search | tool available, not tested | research |

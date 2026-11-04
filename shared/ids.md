@@ -11,6 +11,10 @@ Checked 4 Nov 2026 unless marked "from skill" (copied from a department skill, n
 - **Vanta Team Room - All Papers** (THE one folder for team papers): `1icSdj9jbIJwPcGphUqvnS54rN06-2qeP` (checked)
 - Vanta Team Papers (Sales' older folder, duplicate until Abdullahi decides): `1xs91HdmNyihphxxgruwz8Oi1D604g5Jm` (from Sales' card)
 - 100 books (playbooks): `1DRX7Mc2TmEVHpyseRazM56i-7aAPYD5Q` (checked)
+- **0 From John – originals he sent** (John's own files; today only photos and videos): `1zevGh-nCWTu_L4AMGAQIFahrlof3USUw` (checked 4 Nov)
+  - Site photos he sent (WeChat, 20–22 Oct 2026), 30 JPGs, no floor number visible: `173q8aQg16e2DZz_ylp7IMtCF0wK_NuwM`
+  - Videos he sent (interview, 17 Oct 2026): `16yYxSIAlSe6pF9yhwiOeuoqmjreyAWpV`
+  - **Missing (4 Nov):** John's price list, signed terms (3% rise), payment plan, fee list. Every money number in the papers is second-hand until these are saved here.
 - $100M Offers, full copy: `1s7V1_7sGRFiYxdKSzkFEiV1KPWTz_AI3` (from skill)
 - $100M Journal (74 MB scanned drawings, needs a browser viewer): `14CSeAruNCOtONSuHb6fv7sL-Q6rSEn8i` (from skill)
 
