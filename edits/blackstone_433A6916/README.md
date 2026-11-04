@@ -21,3 +21,10 @@ A needs the Motion Explainer Kit (render.py, kin2.py, motion_v3.py, fonts) and r
 Fonts come from npm (@fontsource/cormorant-garamond, @fontsource/jost, both SIL Open Font License).
 
 `C_style_options.py` renders four style options as stills (hook frame + end card): 1 Vanta Black, 2 Ivory Classic (Libre Caslon), 3 Modern Clean (Montserrat), 4 Emerald & Brass (Playfair Display). Extra fonts from npm: @fontsource/montserrat, @fontsource/playfair-display.
+
+## Video D: style 3 "Modern Clean", 15 s, original score (4 Nov 2026)
+| files | what it is |
+|---|---|
+| `D_render_modernclean.py` | Montserrat; off-white #F3F1ED, charcoal #1E1E1E, sand #B09268. John hook, zoom-out into a rounded window, then three Vanta 3D-tour renders (cube faces cropped 9:16, labelled "Artist's impression · furniture shown for style") with fact chips: 1, 2 & 3 bedroom homes / In Naguru, Kampala / Handover expected October 2027; end card panel slides up. |
+| `D_compose_score.py` | original 7-bar score at 114 BPM (bar = 2.105 s) so every cut lands on a bar line: soft intro, build, drop on the first render, crash on the end card, final Cadd9. Rendered with FluidSynth + FluidR3_GM.sf2 (MIT). |
+| `D_mix.py` | score + a few soft SFX from the pxb library, two-pass loudnorm to −14 LUFS. |
