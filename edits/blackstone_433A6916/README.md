@@ -28,3 +28,13 @@ Fonts come from npm (@fontsource/cormorant-garamond, @fontsource/jost, both SIL 
 | `D_render_modernclean.py` | Montserrat; off-white #F3F1ED, charcoal #1E1E1E, sand #B09268. John hook, zoom-out into a rounded window, then three Vanta 3D-tour renders (cube faces cropped 9:16, labelled "Artist's impression · furniture shown for style") with fact chips: 1, 2 & 3 bedroom homes / In Naguru, Kampala / Handover expected October 2027; end card panel slides up. |
 | `D_compose_score.py` | original 7-bar score at 114 BPM (bar = 2.105 s) so every cut lands on a bar line: soft intro, build, drop on the first render, crash on the end card, final Cadd9. Rendered with FluidSynth + FluidR3_GM.sf2 (MIT). |
 | `D_mix.py` | score + a few soft SFX from the pxb library, two-pass loudnorm to −14 LUFS. |
+
+## Videos E and F (4 Nov 2026), new concepts, palette 3 + IBM Plex Mono record stamps
+| files | what it is |
+|---|---|
+| `E_render_realonly.py` | "Not rendered. Real." 16.8 s, real material only: John's site photos (WeChat, 20–22 Oct 2026) and the blackstone clip. Hook NO RENDERS. / NO AI. / REAL. on three timpani hits; 12 photos land as prints on the beat (STEEL. / BRICK BY BRICK. / FLOOR BY FLOOR.); John; John's print lands and the log blurs back behind "SEE IT WITH YOUR OWN EYES." |
+| `F_render_imagined_vs_real.py` | "Imagined vs Real" 17.5 s: split screen, THE DREAM (Film 1 shots, labelled artist's impression · AI) over THE WORK (real dated site photos), a new pair wipes in on every bar; BUILT BY REAL PEOPLE (John-only crop); FROM PICTURE / TO PLACE. No gym or pool shots (marketing decision D5). |
+| `EF_compose_scores.py` | two original scores: E 100 BPM D minor documentary pulse resolving to F major; F 96 BPM D major, music box for the imagined, strings and drums for the real. |
+| `EF_mix.py` | scores + synthesized camera shutter on each print (E) / soft whooshes on the wipes (F), −14 LUFS. |
+| `EF_common.py` | shared helpers (fonts, crops, prints, pills, wipes). |
+The man in the teal shirt is cropped out of E and F until he is cleared to appear.
