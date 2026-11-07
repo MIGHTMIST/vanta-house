@@ -102,3 +102,14 @@ Eight questions as big Anton cards, each answered by John's single best sentence
 ## Sounds used (all in "Vanta Sounds")
 - **Effects:** whoosh_soft_1, whoosh_medium_3, whoosh_fast_2, whoosh_cinematic_5, pop_soft, riser_2, impact_boom_v2, reverse_swell (into end cards), room_tone_office_v2, clock_tick (Way 4), ambience_building_site (under site B-roll).
 - **Music:** music_calm_piano_A, music_modern_upbeat_A, music_trend_beat_A/B, music_cinematic_build_A.
+
+## What was made (7 Nov 2026)
+All four ways rendered from `scripts/` (`iv.py` is the shared engine; `wayN.py` builds each). Helper (Sonnet) reviews picked the answers; owner changes applied:
+- Host never on screen (only his questions are heard in Way 1). WhatsApp CTA on hold: end card is VANTA HOUSE / Naguru, Kampala.
+- "Ums" and long pauses cut from the sound itself (word-slot length vs expected word length, plus quiet detection), not from ASR gaps.
+- Face close on every answer (wide shot pushed to match the closer end-section shot), two sizes alternating so cuts never jump.
+- Smooth music bed (no sidechain pumping): steady under the voice, rising gently in gaps / on cards / end card; soft whoosh in, very soft pop out; -14 LUFS.
+- Way 4: questions written to fit his answers, answer timer under the captions.
+- Way 2: 6 reels (R6 dropped as weak), hooks true to his words.
+- Way 1: chapter 4 dropped (only banned / repeated material), 8 chapters, 4:38.
+Outputs: John_Way1_FullInterview_16x9, John_Way2_R1..R7 (no R6), John_Way3_TrustFilm 9x16 + 4x5, John_Way4_RapidFire_9x16 (HQ to chat; <3 MB copies in Drive except Way 1).
