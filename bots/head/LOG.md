@@ -12,3 +12,8 @@ Newest at the top. Each line: date, time · what was done · result · Abdullahi
   ad test rule expects 1.6 bookings vs a 5-YES bar; Builder Day timing doesn't fit two people; filming plan fixed to Wednesday;
   live bot v1.14.4 still says 20–50%, live video, fully finished. Abdullahi's words: "check properly all those papers."
   Lesson: read every paper, not the summary pack; the summary was already out of date within an hour.
+- 7 Nov 2026 · Full check of the shared Drive, one item at a time (6 items, Sonnet helpers, HeadBot verified each against
+  the source). Result: bots/head/reviews/2026-11-07-full-check.md. Verdict: direction good, plan not ready (~40/100).
+  Worst: live bot v1.14.4 doesn't know VISIT; 0741 may point at the Apple Residency demo bot; 50% check silences 30% buyers;
+  three public lines from one unrecorded order; John's yes only spoken. Abdullahi's words: "look everything one by one ...
+  is it good or bad?" Lesson: an order not written in the box becomes three orders.
