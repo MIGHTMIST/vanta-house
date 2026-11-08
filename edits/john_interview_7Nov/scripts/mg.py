@@ -238,11 +238,11 @@ def _paper(name, w):
         card.alpha_composite(sh.filter(ImageFilter.GaussianBlur(14))); card.paste(im, (30, 30)); _c[k] = card
     return _c[k]
 
-def _stamp(w):
-    """the APPROVED stamp + date with the white paper keyed out (no grey square over the cards)"""
-    k = ('stamp', w)
+def _stamp(w, name='crop_stamp_clean.png'):
+    """the APPROVED stamp with the white paper keyed out (no grey square over the cards); 8 Nov QA: the permit date/time line is cropped off"""
+    k = ('stamp', w, name)
     if k not in _c:
-        im = np.asarray(Image.open(PAP + 'crop_stamp.png').convert('RGB')).astype(np.float32); s = w / im.shape[1]
+        im = np.asarray(Image.open(PAP + name).convert('RGB')).astype(np.float32); s = w / im.shape[1]
         a = np.clip((235 - im.min(2)) / 90, 0, 1)
         L = Image.fromarray(np.dstack([im, a * 255]).astype(np.uint8), 'RGBA').resize((w, int(im.shape[0] * s)), Image.LANCZOS)
         _c[k] = L                                      # ink only, like a real stamp on the paper
@@ -263,7 +263,7 @@ def papers_card(fr, tl, p):
     us = (tl - 1.25) / 0.22
     if us > 0:   # stamp drops in from big to size
         st = _stamp(int(OW * 0.36)); sc = 1.0 + 0.6 * (1 - eout(us))
-        place(fr, st, OW * 0.72, OH * (ys[-1] - (0.008 if tall else 0.0)), a=eout(us), sc=sc)   # clear of the caption line
+        place(fr, st, OW * 0.72, OH * (ys[-1] + p.get('stamp_dy', 0.0) - (0.008 if tall else 0.0)), a=eout(us), sc=sc)   # clear of the caption line
     if p.get('title', True):
         t1 = T('pt', 'INTEGRITY', int(OW * 0.11), ANTON, GOLD); place(fr, t1, OW / 2, OH * (0.12 if tall else 0.09), a=eout(tl / 0.35), sc=0.94 + 0.06 * eout(tl / 0.35))
     grain(fr, 5, int(tl * 30) + 33)
