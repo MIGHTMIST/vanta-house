@@ -93,10 +93,11 @@ def crop(who, t, z, OW, OH, top=0.36):
     return (x0, y0, cw, ch)
 
 class Reader:
-    def __init__(self, a, dur, rate=1.0):
-        vf = GRADE + ',fps=30'
-        if rate != 1.0: vf = GRADE + ',setpts=%.4f*PTS,fps=30' % (1 / rate)
-        self.p = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', '%.3f' % a, '-t', '%.3f' % (dur + 0.5), '-i', SRC, '-an', '-vf', vf,
+    def __init__(self, a, dur, rate=1.0, path=None, grade=None):
+        g = grade or GRADE
+        vf = g + ',scale=1920:1080,fps=30'
+        if rate != 1.0: vf = g + ',scale=1920:1080,setpts=%.4f*PTS,fps=30' % (1 / rate)
+        self.p = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', '%.3f' % a, '-t', '%.3f' % (dur / rate + 0.5), '-stream_loop', '-1', '-i', path or SRC, '-an', '-vf', vf,
                                    '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], stdout=subprocess.PIPE)
         self.last = None
     def get(self):
@@ -177,11 +178,17 @@ def cap_chunks(voice, keywords, maxw=4, maxc=22):
         if out[i + 1][0] - out[i][1] < 0.6: out[i][1] = out[i + 1][0]
     return out
 
-def cap_layer(words, size):
+def cap_layer(words, size, box=False):
     parts = []
     for i, (w, kw) in enumerate(words):
         parts.append((w, GOLD if kw else WHITE))
-    return text_layer(parts, size, INTERB, shadow=0.75, blur=9)
+    L = text_layer(parts, size, INTERB, shadow=0.0 if box else 0.75, blur=9)
+    if box:
+        bb = L.getbbox(); pad = 22
+        B = Image.new('RGBA', L.size, (0, 0, 0, 0)); d = ImageDraw.Draw(B)
+        d.rounded_rectangle((bb[0] - pad, bb[1] - pad * 0.6, bb[2] + pad, bb[3] + pad * 0.6), 14, fill=(12, 12, 14, 175))
+        B.alpha_composite(L); return B
+    return L
 
 # ---------------------------------------------------------------- graphics (Anton), each eases in and out
 def graphic_draw(fr, g, t):
@@ -206,7 +213,7 @@ def graphic_sfx(g, sin='pop_soft', sout='whoosh_cinematic_5', gin=-6, gout=-12):
 
 _cache = {}
 # ---------------------------------------------------------------- render picture
-def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None, cap_size=54):
+def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None, cap_size=54, fxs=None, cap_box=False):
     """pics: [dict(t, dur, src, who, z0, z1, kind='src'|'card'|'photo', ...)] later entries win"""
     path = OUT + name + '_v.mkv'
     if os.environ.get('REUSE') and os.path.exists(path) and os.path.getsize(path) > 1e6: return path
@@ -218,8 +225,8 @@ def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None
         t = i / FPS
         act = [p for p in pics if p['t'] - 1e-6 <= t < p['t'] + p['dur'] - 1e-6]
         for k, p in enumerate(pics):                      # advance every live source reader so frames stay in sync
-            if p.get('kind', 'src') == 'src' and p['t'] - 1e-6 <= t < p['t'] + p['dur'] - 1e-6:
-                if id(p) not in readers: readers[id(p)] = Reader(p['src'], p['dur'], p.get('rate', 1.0))
+            if p.get('kind', 'src') in ('src', 'clip') and p['t'] - 1e-6 <= t < p['t'] + p['dur'] - 1e-6:
+                if id(p) not in readers: readers[id(p)] = Reader(p['src'], p['dur'], p.get('rate', 1.0), p.get('path'), p.get('grade'))
                 p['_f'] = readers[id(p)].get()
             elif id(p) in readers and t >= p['t'] + p['dur'] - 1e-6:
                 readers.pop(id(p)).close()
@@ -228,6 +235,11 @@ def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None
         if kind == 'src':
             z = p.get('z0', 1.0) + (p.get('z1', p.get('z0', 1.0)) - p.get('z0', 1.0)) * ease(tl)
             img = warp(p['_f'], crop(p.get('who', 'john'), p['src'] + t - p['t'], z, OW, OH, p.get('top', 0.36)), OW, OH)
+        elif kind == 'clip':
+            z = p.get('z0', 1.0) + (p.get('z1', 1.06) - p.get('z0', 1.0)) * ease(tl)
+            ch = 1080 / z; cw = ch * OW / OH
+            if cw > 1920: cw = 1920 / z; ch = cw * OH / OW
+            img = warp(p['_f'], ((1920 - cw) * p.get('cx', 0.5), (1080 - ch) * p.get('cy', 0.5), cw, ch), OW, OH)
         elif kind == 'photo':
             if '_im' not in p:
                 im = Image.open(p['path']).convert('RGB'); im = np.asarray(im); f = max(OW / im.shape[1], OH / im.shape[0]) * 1.12
@@ -237,11 +249,24 @@ def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None
             img = warp(im, ((im.shape[1] - cw) * p.get('cx', 0.5), (im.shape[0] - ch) * p.get('cy', 0.5), cw, ch), OW, OH)
         else:                                               # full-screen card
             img = np.full((OH, OW, 3), p.get('bg', (16, 16, 17)), np.uint8)
+        if p.get('tint') is not None and kind in ('photo', 'clip'):
+            img = np.clip(img.astype(np.float32) * np.array(p['tint'], np.float32)[None, None, :] + p.get('lift', 0), 0, 255).astype(np.uint8)
         if OH > OW * 1.2 and kind != 'card':           # soft dark shade low in the frame so captions read on the bright desk
             if ('_band', OH) not in _cache:
                 yy = np.arange(OH, dtype=np.float32)[:, None, None]
                 _cache[('_band', OH)] = 1 - 0.58 * np.clip((yy - OH * 0.66) / (OH * 0.16), 0, 1) ** 1.2 * np.clip((OH * 0.97 - yy) / (OH * 0.08), 0.35, 1)
             img = (img.astype(np.float32) * _cache[('_band', OH)]).astype(np.uint8)
+        for fx in (fxs or []):
+            if fx['t'] <= t < fx['t'] + fx['dur']:
+                if id(fx) not in readers: readers[id(fx)] = Reader(fx.get('start', 0), fx['dur'], 1.0, fx['path'], 'null')
+                ov = readers[id(fx)].get()
+                if ov is not None:
+                    tl2 = (t - fx['t']) / fx['dur']; a = fx.get('alpha', 0.8) * min(1, tl2 / 0.25, (1 - tl2) / 0.25)
+                    ov = cv2.resize(ov, (OW, OH), interpolation=cv2.INTER_AREA) if OW / OH < 1 else cv2.resize(ov, (OW, OH))
+                    base = img.astype(np.float32); o = ov.astype(np.float32) * a
+                    img = (255 - (255 - base) * (255 - o) / 255).astype(np.uint8)
+            elif id(fx) in readers and t >= fx['t'] + fx['dur']:
+                readers.pop(id(fx)).close()
         fr = None
         gs = [g for g in graphics if g['t'] - 0.01 <= t <= g['t'] + g['dur'] + 0.01]
         cs = [c for c in caps if c[0] <= t < c[1]] if not p.get('nocap') else []
@@ -251,7 +276,7 @@ def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None
             for g in gs: graphic_draw(fr, g, t)
             for c in cs:
                 k = id(c)
-                if k not in capL: capL[k] = cap_layer(c[2], cap_size)
+                if k not in capL: capL[k] = cap_layer(c[2], cap_size, box=cap_box)
                 fa = min(1.0, (t - c[0]) / 0.08)
                 place(fr, capL[k], OW / 2, cap_y, a=fa)
             if extra: extra(fr, t)

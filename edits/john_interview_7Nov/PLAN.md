@@ -113,3 +113,9 @@ All four ways rendered from `scripts/` (`iv.py` is the shared engine; `wayN.py` 
 - Way 2: 6 reels (R6 dropped as weak), hooks true to his words.
 - Way 1: chapter 4 dropped (only banned / repeated material), 8 chapters, 4:38.
 Outputs: John_Way1_FullInterview_16x9, John_Way2_R1..R7 (no R6), John_Way3_TrustFilm 9x16 + 4x5, John_Way4_RapidFire_9x16 (HQ to chat; <3 MB copies in Drive except Way 1).
+
+## Way 3 MOOD edition (8 Nov)
+`scripts/way3m.py`, re-cut of Way 3 using the mood boards:
+- Look: cool blue for the China/banking past (Shanghai skyline and trading screen are stock, used only for the idea); warm golden for Africa and Vanta (sunrise, Nile).
+- Extras: gold light leaks at the beat changes, gold dust on the end card, boxed captions with the gold keyword, and a JOHN YAN name band on "I founded Blackstone".
+- Owner photos (8 Nov): real Vanta floor plan, slab pour and brick laying on site, John with local partners (table), real handshake on site, the Vanta House render (labelled "Artist's impression"), and John with his team on site for "Naguru".
