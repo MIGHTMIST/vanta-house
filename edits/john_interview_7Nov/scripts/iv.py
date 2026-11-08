@@ -299,8 +299,8 @@ def render_audio(name, voice, sfx, music, dur, music_db_under=19.0, swells=(), r
     for k, (a, b, t0) in enumerate(voice):
         f = W + 'vo%02d.wav' % k
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', '%.3f' % a, '-t', '%.3f' % (b - a), '-i', SRC, '-vn', '-af',
-                        'aresample=48000,aformat=channel_layouts=stereo,%s,afade=t=in:d=0.012,afade=t=out:st=%.3f:d=0.03,adelay=%d|%d'
-                        % (VOICE, max(0, b - a - 0.03), int(t0 * 1000), int(t0 * 1000)), f], check=True)
+                        'aresample=48000,aformat=channel_layouts=stereo,%s,afade=t=in:d=0.025,afade=t=out:st=%.3f:d=0.05,adelay=%d|%d'
+                        % (VOICE, max(0, b - a - 0.05), int(t0 * 1000), int(t0 * 1000)), f], check=True)
         segs.append(f)
     vo = W + 'voice.wav'
     inp = sum((['-i', f] for f in segs), [])
@@ -323,7 +323,7 @@ def render_audio(name, voice, sfx, music, dur, music_db_under=19.0, swells=(), r
         parts = [vo, mus]; fl = ['[0:a]asplit=2[v1][vk]', '[1:a]volume=%.2fdB[m0]' % g_m, '[m0][vk]sidechaincompress=threshold=0.03:ratio=4:attack=60:release=500:makeup=1[md]']
     mixin = ['[v1]', '[md]']; n = 2
     if room:
-        parts.append(SND + 'room_tone_office_v2.mp3'); fl.append('[%d:a]aresample=48000,aformat=channel_layouts=stereo,aloop=loop=-1:size=2000000,atrim=0:%.3f,volume=%.2fdB[rt]' % (n, dur, vl - 30 - lufs(SND + 'room_tone_office_v2.mp3')))
+        parts.append(SND + 'room_tone_office_v2.mp3'); fl.append('[%d:a]aresample=48000,aformat=channel_layouts=stereo,aloop=loop=-1:size=2000000,atrim=0:%.3f,volume=%.2fdB[rt]' % (n, dur, vl - 24 - lufs(SND + 'room_tone_office_v2.mp3')))
         mixin.append('[rt]'); n += 1
     for nm, t, gdb in sfx:
         parts.append(SND + nm + '.mp3')
