@@ -55,6 +55,11 @@ def build():
         cx = k.pop('cx', cx_for(path, JX.get(key, 0.5)) if '/' not in key else 0.5)
         ov.append(dict(t=t0, dur=t1 - t0, kind='photo', path=path, z0=k.pop('z0', 1.0), z1=k.pop('z1', 1.07), cx=cx, cy=k.pop('cy', 0.4),
                        tint=k.pop('tint', WARM_T), **k)); sfx.append(('whoosh_soft_1', t0 - 0.1, -21))
+    BEAUTY = '/root/.claude/uploads/253db02e-90a6-5547-b8b3-69bd9a44cdc8/3edf9be4-beauty_20261017161429.mp4'
+    ANG = {'wide': dict(z0=1.0, z1=1.05, cx=0.22, cy=0.5), 'medium': dict(z0=1.6, z1=1.72, cx=0.37, cy=0.37),
+           'close': dict(z0=2.2, z1=2.4, cx=0.40, cy=0.25), 'push': dict(z0=1.0, z1=1.55, cx=0.30, cy=0.33)}
+    def onsite(t0, t1, start, angle):           # owner's clip of John on site (no sound), a different camera angle each time
+        ov.append(dict(t=t0, dur=t1 - t0, kind='clipv', path=BEAUTY, src=start, grade=WARM, **ANG[angle])); sfx.append(('whoosh_soft_1', t0 - 0.1, -20))
     def cardd(t0, t1, fn, **k): ov.append(dict(t=t0, dur=t1 - t0, kind='card', draw=fn, **k))
     def leak(t, start=0.0, a=0.6): fxs.append(dict(t=t - 0.45, dur=1.2, path=B + 'b7_lightleak_gold_1.mp4', start=start, alpha=a))
     gy = int(OH * 0.105)
@@ -145,20 +150,21 @@ def build():
     photo(t_n - 0.2, t_n + 2.8, PE + 'site_group5.jpg', cx=0.5, cy=0.5)
     word('NAGURU', t_n, 2.4)
     overlays.append(('loc', dict(t0=t_n + 0.1, t1=t_n + 2.8, y=0.22))); sfx.append(('pop_soft', t_n + 0.1, -22))
-    t_cs = wt('carefully selected', a['t0']); photo(t_cs - 0.2, t_cs + 2.3, 'a497f854')
+    t_cs = wt('carefully selected', a['t0']); onsite(max(wt('based on this foundation', a['t0']) - 0.1, t_n + 2.8), t_cs + 2.3, 0.5, 'wide')
     t_hq = wt('high-quality residential', a['t0']) if 'high-quality' in iv.TOK else wt('develop more', a['t0'])
     photo(t_hq - 0.1, t_hq + 2.4, PE + 'render_vanta_house.jpg', tint=None, cx=0.3, cy=0.45)
     imp = dict(t0=t_hq - 0.1, t1=t_hq + 2.3); overlays.append(('imp', imp)); rend_ph = ov[-1]
     t_td = wt('trusted developments', a['t0']); t_h = (t_td - 0.2 + a['t1'] + 0.3) / 2
-    photo(t_td - 0.2, t_h, 'cd590606'); photo(t_h, a['t1'] + 0.3, 'f729f654')
+    photo(t_td - 0.2, t_h, 'cd590606'); onsite(t_h, a['t1'] + 0.3, 6.0, 'medium')
 
     # 08 LOCAL PARTNERS WANTED: John with local partners on site, the site itself on "property agents"
     a = segs[16]
     t_mp = wt('more local partners', a['t0']); photo(t_mp - 0.2, t_mp + 2.3, 'dfa63778')
-    t_ll = wt('local landlords', a['t0']); photo(t_ll - 0.2, t_ll + 2.4, '1b04dab0')
+    t_ll = wt('local landlords', a['t0']); onsite(t_ll - 0.2, t_ll + 2.6, 12.0, 'close')
     t_ag = wt('property agents', a['t0']); photo(t_ag - 2.0, a['t1'] + 0.25, UP + 'e0ebef93-image.jpg', cx=0.5, cy=0.5)
 
-    # CLOSE: on John's face, then the end card with gold dust
+    # CLOSE: "You are welcome to visit our project..." over John on the real site (owner's clip), then the end card
+    onsite(wt('you are welcome to visit', segs[-1]['t0']) - 0.1, end, 15.0, 'push')
     fxs.append(dict(t=end - 0.4, dur=dur - end + 0.4, path=B + 'b7_dust_particles_4.mp4', alpha=0.55))
     sfx += [('whoosh_soft_1', t_ch - 0.2, -18)]
     # smoothness (board review): no John slivers between two cutaways, no sub-second zoom jumps
@@ -225,5 +231,5 @@ if __name__ == '__main__':
                               cap_y=1490, cap_size=52, fxs=[dict(f, t=f['t'] - a) for f in P['fxs']], cap_box=True, extra=lambda fr, t: P['extra'](fr, t + a)))
         sys.exit()
     v = iv.render_video('way1v', OW, OH, P['pics'], P['G'], P['caps'], P['dur'], cap_y=1490, cap_size=52, fxs=P['fxs'], cap_box=True, extra=P['extra'])
-    au = iv.render_audio('way1v', P['voice'], P['sfx'], 'music_way1v_bed.mp3', P['dur'], music_db_under=19.0, smooth=True, lift=P['lifts'], lift_db=8.0)
+    au = iv.render_audio('way1v', P['voice'], P['sfx'], 'music_way1v_bed.mp3', P['dur'], music_db_under=14.0, smooth=True, lift=P['lifts'], lift_db=6.0)
     print(iv.encode('way1v', v, au, 'John_Way1_FullInterview_MOOD_PLUS_9x16_1080'))

@@ -93,16 +93,16 @@ def crop(who, t, z, OW, OH, top=0.36):
     return (x0, y0, cw, ch)
 
 class Reader:
-    def __init__(self, a, dur, rate=1.0, path=None, grade=None):
-        g = grade or GRADE
-        vf = g + ',scale=1920:1080,fps=30'
-        if rate != 1.0: vf = g + ',scale=1920:1080,setpts=%.4f*PTS,fps=30' % (1 / rate)
+    def __init__(self, a, dur, rate=1.0, path=None, grade=None, size=(1920, 1080)):
+        g = grade or GRADE; self.W, self.H = size
+        vf = g + ',scale=%d:%d,fps=30' % size
+        if rate != 1.0: vf = g + ',scale=%d:%d,setpts=%.4f*PTS,fps=30' % (size + (1 / rate,))
         self.p = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', '%.3f' % a, '-t', '%.3f' % (dur / rate + 0.5), '-stream_loop', '-1', '-i', path or SRC, '-an', '-vf', vf,
                                    '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], stdout=subprocess.PIPE)
         self.last = None
     def get(self):
-        b = self.p.stdout.read(1920 * 1080 * 3)
-        if len(b) == 1920 * 1080 * 3: self.last = np.frombuffer(b, np.uint8).reshape(1080, 1920, 3)
+        b = self.p.stdout.read(self.W * self.H * 3)
+        if len(b) == self.W * self.H * 3: self.last = np.frombuffer(b, np.uint8).reshape(self.H, self.W, 3)
         return self.last
     def close(self):
         try: self.p.stdout.close(); self.p.kill()
@@ -225,8 +225,8 @@ def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None
         t = i / FPS
         act = [p for p in pics if p['t'] - 1e-6 <= t < p['t'] + p['dur'] - 1e-6]
         for k, p in enumerate(pics):                      # advance every live source reader so frames stay in sync
-            if p.get('kind', 'src') in ('src', 'clip') and p['t'] - 1e-6 <= t < p['t'] + p['dur'] - 1e-6:
-                if id(p) not in readers: readers[id(p)] = Reader(p['src'], p['dur'], p.get('rate', 1.0), p.get('path'), p.get('grade'))
+            if p.get('kind', 'src') in ('src', 'clip', 'clipv') and p['t'] - 1e-6 <= t < p['t'] + p['dur'] - 1e-6:
+                if id(p) not in readers: readers[id(p)] = Reader(p['src'], p['dur'], p.get('rate', 1.0), p.get('path'), p.get('grade'), (1080, 1440) if p.get('kind') == 'clipv' else (1920, 1080))
                 p['_f'] = readers[id(p)].get()
             elif id(p) in readers and t >= p['t'] + p['dur'] - 1e-6:
                 readers.pop(id(p)).close()
@@ -240,6 +240,11 @@ def render_video(name, OW, OH, pics, graphics, caps, dur, extra=None, cap_y=None
             ch = 1080 / z; cw = ch * OW / OH
             if cw > 1920: cw = 1920 / z; ch = cw * OH / OW
             img = warp(p['_f'], ((1920 - cw) * p.get('cx', 0.5), (1080 - ch) * p.get('cy', 0.5), cw, ch), OW, OH)
+        elif kind == 'clipv':                              # vertical phone clip (3:4 source read at 1080x1440): crop a 9:16 window, zoom = new angle
+            z = p.get('z0', 1.0) + (p.get('z1', 1.06) - p.get('z0', 1.0)) * ease(tl)
+            ch = 1440 / z; cw = ch * OW / OH
+            if cw > 1080: cw = 1080 / z; ch = cw * OH / OW
+            img = warp(p['_f'], ((1080 - cw) * p.get('cx', 0.5), (1440 - ch) * p.get('cy', 0.5), cw, ch), OW, OH)
         elif kind == 'photo':
             if '_im' not in p:
                 im = Image.open(p['path']).convert('RGB'); im = np.asarray(im); f = max(OW / im.shape[1], OH / im.shape[0]) * 1.12
