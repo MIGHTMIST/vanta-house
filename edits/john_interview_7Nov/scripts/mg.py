@@ -218,7 +218,7 @@ def location_overlay(fr, t, p):
     import mgk; mgk.scrim(fr, int(y - 40), int(y + 95), 0.55 * a, fade=70)          # QA 8 Nov: readable on bright concrete
     dot(fr, x, y + 4, 10, GOLD, a=a, ring=(tl % 1.4) / 1.4)
     l1 = T('lo1', 'VANTA HOUSE', int(OW * 0.06), ANTON, WHITE); place(fr, l1, x + 34 + l1.width / 2 - 40 + (1 - eout(tl / 0.4)) * -30, y - 6, a=a)
-    l2 = T('lo2', 'Naguru, Kampala  ·  Site photo 2026', int(OW * 0.028), INTERB, GOLD, 0.7, 8); place(fr, l2, x + 34 + l2.width / 2 - 40, y + l1.height * 0.55, a=a * eout((tl - 0.2) / 0.4))
+    l2 = T('lo2' + p.get('l2', ''), p.get('l2', 'Naguru, Kampala  ·  Site photo 2026'), int(OW * 0.028), INTERB, GOLD, 0.7, 8); place(fr, l2, x + 34 + l2.width / 2 - 40, y + l1.height * 0.55, a=a * eout((tl - 0.2) / 0.4))
 
 def label(fr, t, p, text):
     """small corner label: Artist's impression / Site photo"""
