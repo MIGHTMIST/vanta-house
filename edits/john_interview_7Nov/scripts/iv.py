@@ -155,7 +155,7 @@ def cap_chunks(voice, keywords, maxw=4, maxc=22):
         def flush():
             if cur:
                 s = t0 + cur[0]['t'] - a; e = t0 + cur[-1]['end'] - a
-                out.append([s, e, [(x['txt'], x['kw']) for x in cur]])
+                out.append([s, e, [(x['txt'], x['kw']) for x in cur], [t0 + x['t'] - a for x in cur]])   # 4th: word start times (kit word-pop captions)
         for w in ws:
             raw = w['w']; core = raw.rstrip('.,?!'); tail = raw[len(core):]
             txt = FIX.get(raw.lower(), None) or (FIX[core.lower()] + tail if core.lower() in FIX else raw)
@@ -332,9 +332,9 @@ def render_audio(name, voice, sfx, music, dur, music_db_under=19.0, swells=(), r
     fl.append(''.join(mixin) + 'amix=inputs=%d:normalize=0:duration=first,atrim=0:%.3f[mx]' % (len(mixin), dur))
     pre = W + 'pre.wav'
     subprocess.run(['ffmpeg', '-v', 'error', '-y'] + sum((['-i', p] for p in parts), []) + ['-filter_complex', ';'.join(fl), '-map', '[mx]', '-c:a', 'pcm_s24le', pre], check=True)
-    r = subprocess.run(['ffmpeg', '-hide_banner', '-i', pre, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'], capture_output=True, text=True).stderr
+    r = subprocess.run(['ffmpeg', '-hide_banner', '-i', pre, '-af', 'loudnorm=I=-14:TP=-2.0:LRA=11:print_format=json', '-f', 'null', '-'], capture_output=True, text=True).stderr
     j = json.loads(r[r.rindex('{'):r.rindex('}') + 1])
-    af = 'loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s:linear=true,aresample=48000' % (
+    af = 'loudnorm=I=-14:TP=-2.0:LRA=11:measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s:linear=true,aresample=48000' % (
         j['input_i'], j['input_tp'], j['input_lra'], j['input_thresh'], j['target_offset'])
     fin = W + 'mix.wav'
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', pre, '-af', af, '-c:a', 'pcm_s24le', fin], check=True)

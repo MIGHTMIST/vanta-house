@@ -119,3 +119,19 @@ Outputs: John_Way1_FullInterview_16x9, John_Way2_R1..R7 (no R6), John_Way3_Trust
 - Look: cool blue for the China/banking past (Shanghai skyline and trading screen are stock, used only for the idea); warm golden for Africa and Vanta (sunrise, Nile).
 - Extras: gold light leaks at the beat changes, gold dust on the end card, boxed captions with the gold keyword, and a JOHN YAN name band on "I founded Blackstone".
 - Owner photos (8 Nov): real Vanta floor plan, slab pour and brick laying on site, John with local partners (table), real handshake on site, the Vanta House render (labelled "Artist's impression"), and John with his team on site for "Naguru".
+
+## 8 Nov: kit graphics, keep + add, Marketing R1 test
+- `mgk.py`: graphics rebuilt from Marketing's MOTION + SOUND KIT and MOTION GRAPHICS REFERENCES:
+  - T1 word-pop captions (in a soft pill), T3 bar titles, T4 counter, T5 map route on a real land-mask dot map
+  - T8 light leak, word pops (out-back overshoot), name strip, tracked luxury title, T3 end card
+  - True peak is now mastered at -2 dBTP (`fixtp.sh` fixes older files).
+- Owner rule (8 Nov): never throw out what was liked. `way3k.py` = the MOOD edition kept whole, with my graphics added in the gaps.
+- "I founded Blackstone" uses the owner's black-and-white portrait of John with the name under it.
+- Face check (dlib + Sonnet helper): office photos A/B and other glasses portraits are not used; real phone photos are.
+- Papers: only the header crops (no numbers, names, phones, money, signatures) and the drawing's APPROVED stamp + date.
+  - The "THE SIGNATURE · NAGURU" sign on the drawing is masked out.
+- The render is cropped above the pool (no pool shots rule).
+- Marketing R1 test (`r1k.py`): V1 teal + Inter ExtraBold, V2 gold + Anton, V3 best (looks follow the words, more real pictures).
+  - Sarah closes on her approved line ending "Vanta House in Naguru, Kampala."
+  - The WhatsApp CTA is on hold, and no VISIT recording exists.
+- `way2k.py` (Sonnet helper, reviewed): reels R2-R7 in the kit style, every original word graphic kept.
