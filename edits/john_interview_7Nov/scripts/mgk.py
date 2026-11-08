@@ -81,8 +81,18 @@ def chunk_words(words, maxw=4, gap=0.32):
     return out
 
 # ---------------------------------------------------------------- T3 title (bar wipes from centre, lines rise in) - used for the hook
+def scrim(fr, y0, y1, alpha, fade=90):
+    """soft dark band (black, alpha) from y0 to y1 with feathered edges - keeps white text readable on bright walls/sky"""
+    W = fr.size[0]; k = ('scr', W, y0, y1, fade)
+    if k not in _c:
+        ys = np.arange(y0 - fade, y1 + fade); m = np.clip(np.minimum(ys - (y0 - fade), (y1 + fade) - ys) / fade, 0, 1) ** 1.5
+        _c[k] = (y0 - fade, Image.fromarray((np.tile(m[:, None], (1, W)) * 255).astype(np.uint8)))
+    yt, M = _c[k]; L = Image.new('RGBA', (W, M.height), (0, 0, 0, 0)); L.putalpha(M.point(lambda v: int(v * alpha)))
+    fr.alpha_composite(L, (0, max(0, yt)))
+
 def title2(fr, t, H, T, y=330):
     tl = t - H['t0']; uo = 1 - smooth((t - (H['t1'] - 0.3)) / 0.3)
+    scrim(fr, y - 90, y + 40 + H.get('gap', 98) * (len(H['lines']) - 1), 0.42 * min(ocubic(tl / 0.3), uo))
     bw = 96 * oexpo((tl - 0.2) / 0.4); bar(fr, 540, y - 62, bw, 6, T['acc'], uo)
     for i, (txt, col) in enumerate(H['lines']):
         u = ocubic((tl - 0.27 - 0.27 * i) / 0.47)
@@ -217,6 +227,7 @@ def light_leak(fr, t, t_cut, strength=0.75):
 # ---------------------------------------------------------------- MOTION_08 tracked luxury title (letters fade in L->R over 20 f, key line solid accent)
 def lux_title(fr, t, L, T):
     tl = t - L['t0']; out = smooth((t - (L['t1'] - 0.3)) / 0.3)
+    scrim(fr, L['y'] - 50, L['y'] + 150, 0.5 * min(ocubic(tl / 0.3), 1 - out))
     s = L['small']; F = font(INTER_MD, 40); tr = 14; ws = [F.getlength(c) for c in s]; tot = sum(ws) + tr * (len(s) - 1); x = 540 - tot / 2
     for i, (c, w) in enumerate(zip(s, ws)):
         u = smooth((tl - i * (20 / 30) / len(s)) / 0.25)

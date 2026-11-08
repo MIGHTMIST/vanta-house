@@ -11,7 +11,7 @@ RP = iv.S + '/people/real/'
 THEMES = {'gold': dict(acc=(201, 162, 75), font=iv.ANTON, name='gold')}
 WARM_T = (1.06, 1.0, 0.9)
 PLAN = way2g.PLAN
-POPY = 420
+POPY = 350
 
 def build(rk, v='gold'):
     T = THEMES[v]; mg.GOLD = T['acc']; mg.ANTON = T['font']
@@ -43,7 +43,7 @@ def build(rk, v='gold'):
     pre_ov = []   # step / location / gap overlays computed first so pops can avoid them
     popsrc = []
     for g in P['G']:
-        popsrc.append(dict(t0=g['t'], t1=g['t'] + 2.2, text=g['text'], y=POPY, size=150 if len(g['text']) < 10 else 118))
+        popsrc.append(dict(t0=g['t'], t1=g['t'] + 2.2, text=g['text'], y=POPY, size=128 if len(g['text']) < 10 else 108))
     # cutaways
     ltypes = []
     for phrase, af, kind, what, ln, o in C['inserts']:
@@ -79,7 +79,7 @@ def build(rk, v='gold'):
             ov.append(dict(t=t0, dur=t1 - t0, kind='photo', path=path, z0=1.0, z1=1.08, cx=cx, cy=0.4, tint=WARM_T)); name = 'photo ' + what.split('/')[-1]
             sfx.append(('sfx_camera_shutter_1', t0 - 0.02, -24))
             if o.get('loc'):
-                ovl.append(('loc', dict(t0=t0 + 0.15, t1=t1, y=C.get('loc_y', 0.085)))); sfx.append(('sfx_ui_swoosh_in_1', t0 + 0.12, -19)); name += ' + location tag'
+                ovl.append(('loc', dict(t0=t0 + 0.15, t1=t1, y=0.085))); sfx.append(('sfx_ui_swoosh_in_1', t0 + 0.12, -19)); name += ' + location tag'
         timeline.append((t0, t1, name + ' on "%s"' % phrase))
     if C.get('gap'):
         tg = [g for g in P['G'] if g['text'] == 'THE GAP']
@@ -90,14 +90,14 @@ def build(rk, v='gold'):
         timeline.append((gp['t0'], gp['t1'], 'gap bars (demand %.1f, supply %.1f, gap %.1f)' % (gp['hit_demand'], gp['hit_supply'], gp['hit_gap'])))
     if C.get('steps'):
         hits = [wt('land acquisition', 220), wt('construction coordination', 220), wt('marketing', 220), wt('delivery', 220)]
-        st = dict(t0=hits[0] - 0.35, t1=wt('delivery', 220, last=True) + 0.3, hits=hits, y=C.get('steps_y', 0.2))
+        st = dict(t0=hits[0] - 0.35, t1=wt('delivery', 220, last=True) + 0.3, hits=hits, y=0.105)
         ovl.append(('steps', st)); sfx += [('sfx_text_pop_%d' % (1 + i % 3), h, -19) for i, h in enumerate(hits)]
         timeline.append((st['t0'], st['t1'], 'step tracker hits ' + ','.join('%.1f' % h for h in hits)))
     # pops: avoid an overlay tag sitting at the same height
     for w in popsrc:
         for k, o in ovl:
             if k in ('steps', 'loc') and o['t0'] - 0.2 <= w['t1'] and w['t0'] <= o['t1']:
-                w['y'] = 640 if k == 'steps' else 640
+                if k == 'steps': w['y'] = 1120; w['t1'] = min(w['t1'], o['t1'])   # QA 8 Nov: low on clear floor plan / photo, and gone before the cut back to John
         if any(p['kind'] == 'card' and p['draw'] is mg.papers_card and p['t'] <= w['t0'] < p['t'] + p['dur'] for p in ov): w['y'] = 330   # above the top paper
         nc = [p['t'] for p in ov if p['kind'] == 'card' and w['t0'] < p['t'] < w['t1']]
         if nc: w['t1'] = min(nc)
@@ -106,10 +106,11 @@ def build(rk, v='gold'):
     sfx += mgk.end_sfx(end)
     timeline.append((end, P['dur'], 'original end card'))
     pics = pics + ov + endc
-    chunks = []
+    chunks = []   # captions are clipped at the end card below (8 Nov QA)
     for c in P['caps']:
         times = c[3] if len(c) > 3 else [c[0]] * len(c[2])
         chunks.append(dict(t0=c[0] - 0.04, t1=c[1], words=[(w, ts) for (w, kw), ts in zip(c[2], times)]))
+    chunks[:] = [dict(c, t1=min(c['t1'], end - 0.05)) for c in chunks if c['t0'] < end - 0.1]
     def extra(fr, t):
         t = float(t)
         for k, o in ovl:

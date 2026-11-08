@@ -31,7 +31,7 @@ def build(OW, OH):
     # TURN: "After 10 years in China's investment banking industry" -> cool blue China, then warm Africa
     t_ch = wt("china's"); t_bank = wt('banking'); t_saw = wt('saw significant'); t_af = wt("africa's")
     clip(t_ch - 0.15, t_bank - 0.1, 'b1_shanghai_day_skyline_1.mp4', COOL, z0=1.0, z1=1.08)
-    clip(t_bank - 0.1, t_saw - 0.05, 'b1_trading_screen_4.mp4', COOL, z0=1.05, z1=1.15)
+    clip(t_bank - 0.1, t_saw - 0.05, 'b1_trading_screen_4.mp4', COOL + ',boxblur=6:1', z0=1.05, z1=1.15)   # blur: no readable tickers/figures (QA 8 Nov)
     a0, a1 = [(t0, t0 + y - x) for x, y, t0 in voice if x - 0.03 <= iv.WORDS[iv.find('after 10 years')]['t'] < y][0][0], None
     e2a = max(t0 + y - x for x, y, t0 in voice if x < iv.WORDS[iv.find('markets')]['t'] + 0.5 and t0 < t_af + 6)
     clip(t_af - 0.2, e2a + 0.3, 'b2_sunrise_sun_1.mp4', WARM, z0=1.0, z1=1.06)
@@ -52,7 +52,7 @@ def build(OW, OH):
     # NOW: "deliver Vanta House ... in Naguru" -> the real site, golden
     t_v = wt('van house', 435); t_n = wt('navuru')
     t_mid = (t_v - 0.15 + t_n + 1.2) / 2
-    photo(t_v - 0.15, t_mid, PE + 'render_vanta_house.jpg', z0=1.0, z1=1.08, cx=0.5, cy=0.45)              # labelled Artist's impression
+    photo(t_v - 0.15, t_mid, PE + 'render_vanta_house.jpg', z0=1.0, z1=1.08, cx=0.3, cy=0.45)              # labelled Artist's impression
     photo(t_mid, t_n + 1.2, PE + 'site_group5.jpg', z0=1.0, z1=1.06, cx=0.5, cy=0.5, tint=WARM_T)         # John and team on the real site
     imp = dict(t=t_v - 0.15, dur=t_mid - t_v + 0.15)
     pics = pics + ov + card

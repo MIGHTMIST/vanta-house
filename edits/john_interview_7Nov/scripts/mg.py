@@ -208,16 +208,17 @@ def gap_overlay(fr, t, p):
         while x < gx0 + (gx1 - gx0) * ug:
             d.line((x, yy, min(x + 16, gx1), yy), fill=(255, 255, 255, int(200 * a)), width=4); x += 28
         fr.alpha_composite(L)
-        g = T('gg', 'THE GAP', int(OW * 0.05), ANTON, WHITE); place(fr, g, (gx0 + gx1) / 2, y2 - 30, a=a * ug, sc=0.9 + 0.1 * ug)
+        g = T('gg', 'THE GAP', int(OW * 0.042), ANTON, WHITE); place(fr, g, (gx0 + gx1) / 2, y2 + bh + 30, a=a * ug, sc=0.9 + 0.1 * ug)
 
 # ------------------------------------------------------------------ 6. location tag (Vanta House, Naguru) on the real site photo
 def location_overlay(fr, t, p):
     OW, OH = fr.size; tl = t - p['t0']; a = min(eout(tl / 0.35), 1 - ease((t - (p['t1'] - 0.35)) / 0.35))
     if a <= 0: return
     x, y = OW * 0.09, OH * p.get('y', 0.085)
+    import mgk; mgk.scrim(fr, int(y - 40), int(y + 95), 0.55 * a, fade=70)          # QA 8 Nov: readable on bright concrete
     dot(fr, x, y + 4, 10, GOLD, a=a, ring=(tl % 1.4) / 1.4)
     l1 = T('lo1', 'VANTA HOUSE', int(OW * 0.06), ANTON, WHITE); place(fr, l1, x + 34 + l1.width / 2 - 40 + (1 - eout(tl / 0.4)) * -30, y - 6, a=a)
-    l2 = T('lo2', 'Naguru, Kampala  ·  Site photo 2026', int(OW * 0.028), INTERB, GOLD, 0.7, 8); place(fr, l2, x + 34 + l2.width / 2 - 40, y + l1.height * 0.42, a=a * eout((tl - 0.2) / 0.4))
+    l2 = T('lo2', 'Naguru, Kampala  ·  Site photo 2026', int(OW * 0.028), INTERB, GOLD, 0.7, 8); place(fr, l2, x + 34 + l2.width / 2 - 40, y + l1.height * 0.55, a=a * eout((tl - 0.2) / 0.4))
 
 def label(fr, t, p, text):
     """small corner label: Artist's impression / Site photo"""
@@ -237,11 +238,22 @@ def _paper(name, w):
         card.alpha_composite(sh.filter(ImageFilter.GaussianBlur(14))); card.paste(im, (30, 30)); _c[k] = card
     return _c[k]
 
+def _stamp(w):
+    """the APPROVED stamp + date with the white paper keyed out (no grey square over the cards)"""
+    k = ('stamp', w)
+    if k not in _c:
+        im = np.asarray(Image.open(PAP + 'crop_stamp.png').convert('RGB')).astype(np.float32); s = w / im.shape[1]
+        a = np.clip((235 - im.min(2)) / 90, 0, 1)
+        L = Image.fromarray(np.dstack([im, a * 255]).astype(np.uint8), 'RGBA').resize((w, int(im.shape[0] * s)), Image.LANCZOS)
+        _c[k] = L                                      # ink only, like a real stamp on the paper
+    return _c[k]
+
 def papers_card(fr, tl, p):
     OW, OH = fr.size; bg(fr, (16, 13, 10), (40, 30, 18), tl)
     tall = OH > 1500; w = int(OW * (0.82 if tall else 0.66))
     names = ['crop_building_permit.png', 'crop_nema.png', 'crop_kcca_dev.png']
     ys = [0.27, 0.43, 0.58] if tall else [0.26, 0.45, 0.63]
+    if not p.get('title', True): ys = [y + 0.03 for y in ys]
     for i, (n, yy) in enumerate(zip(names, ys)):
         u = eout((tl - 0.15 - 0.28 * i) / 0.5)
         if u <= 0: continue
@@ -250,8 +262,8 @@ def papers_card(fr, tl, p):
         place(fr, R, OW / 2 + (1 - u) * OW * 0.6 * (1 if i % 2 == 0 else -1), OH * yy, a=u, sc=1 + 0.01 * tl)
     us = (tl - 1.25) / 0.22
     if us > 0:   # stamp drops in from big to size
-        st = _paper('crop_stamp.png', int(OW * 0.36)); sc = 1.0 + 0.6 * (1 - eout(us))
-        place(fr, st, OW * 0.74, OH * (ys[-1] + (0.055 if tall else 0.085)), a=eout(us), sc=sc)   # clear of the caption line
+        st = _stamp(int(OW * 0.36)); sc = 1.0 + 0.6 * (1 - eout(us))
+        place(fr, st, OW * 0.72, OH * (ys[-1] - (0.008 if tall else 0.0)), a=eout(us), sc=sc)   # clear of the caption line
     if p.get('title', True):
         t1 = T('pt', 'INTEGRITY', int(OW * 0.11), ANTON, GOLD); place(fr, t1, OW / 2, OH * (0.12 if tall else 0.09), a=eout(tl / 0.35), sc=0.94 + 0.06 * eout(tl / 0.35))
     grain(fr, 5, int(tl * 30) + 33)

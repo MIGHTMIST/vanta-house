@@ -58,7 +58,7 @@ def build(v):
     sfx += [('sfx_whoosh_soft_3', t_f + 0.2, -18), ('sfx_text_pop_1', t_f + 0.75, -20)]
     # "investment analysis": market screen again (cool), DISCIPLINE word pop (top zone, above his head)
     t_ia = wt('investment analysis', 179)
-    ov.append(dict(t=t_ia - 0.1, dur=1.7, kind='clip', path=B + 'b1_trading_screen_4.mp4', src=4.0, grade="eq=saturation=0.75:contrast=1.06,colorbalance=bs=0.08:rs=-0.06", z0=1.02, z1=1.1))
+    ov.append(dict(t=t_ia - 0.1, dur=1.7, kind='clip', path=B + 'b1_trading_screen_4.mp4', src=4.0, grade="eq=saturation=0.75:contrast=1.06,colorbalance=bs=0.08:rs=-0.06,boxblur=6:1", z0=1.02, z1=1.1))   # no readable tickers
     sfx.append(('sfx_swish_fast_1', t_ia - 0.12, -19))
     pops = []
     for g in P['G']:
@@ -82,7 +82,7 @@ def build(v):
     for a, b, path in seq: photo(S_[a] - 0.05, S_[b] - 0.05, path, tint=STEEL_T if v == 'best' else WARM_T, z=(1.0, 1.07), snd=(a != 'picture'))
     ov.append(dict(t=S_['homes'] - 0.05, dur=S_['vanta'] - S_['homes'], kind='photo', path=PE + 'render_vanta_house.jpg', z0=1.0, z1=1.06, cx=0.3, cy=0.5, tint=None))
     ovl.append(('imp', dict(t0=S_['homes'] - 0.05, t1=S_['vanta'] - 0.05)))
-    ovl.append(('lux', dict(t0=S_['homes'] + 1.05, t1=S_['vanta'] - 0.1, small='HANDOVER EXPECTED', big='OCTOBER 2027', y=470)))
+    ovl.append(('lux', dict(t0=S_['homes'] + 1.05, t1=S_['vanta'] - 0.1, small='HANDOVER EXPECTED', big='OCTOBER 2027', y=1080)))
     sfx += [('sfx_whoosh_soft_3', S_['homes'] + 1.0, -20), ('sfx_impact_soft_1', S_['homes'] + 1.7, -19)]
     if v == 'best':
         for k, w in (('workers', 'WORKERS'), ('steel', 'STEEL'), ('concrete', 'CONCRETE')):

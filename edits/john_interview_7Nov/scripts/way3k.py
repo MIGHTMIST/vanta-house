@@ -31,7 +31,7 @@ def build(OW, OH):
     add.append(dict(t=t_f - 0.1, dur=3.5, kind='card', draw=mg.founder_card, photo='john_headshot_black_shirt.jpg'))
     # 4. step tracker over the floor plan / slab / bricks already in the mood edition
     t_land = wt('land acquisition', 220); t_con = wt('construction coordination', 220); t_mk = wt('marketing', 220); t_del = wt('delivery', 236)
-    overlays.append(('steps', dict(t0=t_land - 0.2, t1=t_del + 0.9, hits=[t_land, t_con, t_mk, t_del], y=0.2)))
+    overlays.append(('steps', dict(t0=t_land - 0.2, t1=t_del + 0.9, hits=[t_land, t_con, t_mk, t_del], y=0.105)))
     sfx += [('pop_soft', h, -23) for h in (t_land, t_con, t_mk, t_del)]
     # 5. papers after the handshake (the INTEGRITY title stays the original word graphic)
     t_int = wt('integrity'); t_v = wt('van house', 435)
