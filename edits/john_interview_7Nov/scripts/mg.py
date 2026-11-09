@@ -295,13 +295,13 @@ def blueprint_card(fr, tl, p):
             fr.alpha_composite(L, (0, max(0, yl - 20)))
     lab = T('bpl', 'Architectural drawing', 30, INTERB, (200, 220, 245), 0.8, 8)
     xr = clamp((tl - (dur * 0.55)) / 0.6)
-    place(fr, lab, OW - 50 - lab.width / 2 + 40, int(OH * 0.06), a=min(eout(tl / 0.4), 1 - xr))
+    place(fr, lab, OW - 50 - lab.width / 2 + 40, int(OH * 0.06), a=min(eout(tl / 0.4), 1 - clamp(xr * 3)))   # QA 9 Nov: gone before the render label comes in
     if xr > 0:                                                        # cross-dissolve into the render (artist's impression)
         r = p['rd']; z = 1 + 0.05 * xr; cw, ch = int(OW / z), int(OH / z)
         crop = r.crop((int((r.width - cw) * 0.28), int((r.height - ch) * 0.45), int((r.width - cw) * 0.28) + cw, int((r.height - ch) * 0.45) + ch)).resize((OW, OH), Image.BILINEAR).convert('RGBA')
         crop.putalpha(int(255 * ease(xr))); fr.alpha_composite(crop)
         l2 = T('lab' + "Artist's impression", "Artist's impression", 30, INTERB, WHITE, 0.85, 8)
-        place(fr, l2, OW - 50 - l2.width / 2 + 40, int(OH * 0.06), a=ease(xr))
+        place(fr, l2, OW - 50 - l2.width / 2 + 40, int(OH * 0.06), a=ease(clamp((xr - 0.35) / 0.4)))
     grain(fr, 5, int(tl * 30) + 71)
 
 # ------------------------------------------------------------------ 9. FOUNDER: logo reveal, then a real photo of John (owner's choice 8 Nov: real photos only), name under it (never on the face)
