@@ -1,0 +1,7 @@
+[
+ {"t":0.6,"type":"tick"},{"t":1.2,"type":"shimmer"},{"t":3.9,"type":"tick"},{"t":4.4,"type":"riser_start"},
+ {"t":5.4,"type":"boom"},{"t":6.7,"type":"pop"},{"t":7.3,"type":"water"},{"t":8.3,"type":"pop"},{"t":9.4,"type":"whoosh"},
+ {"t":14.8,"type":"tick"},{"t":16.9,"type":"whoosh"},{"t":18.6,"type":"tick"},{"t":22.6,"type":"tick"},{"t":22.6,"type":"water"},{"t":23.2,"type":"shimmer"},
+ {"t":27.0,"type":"tick"},{"t":28.6,"type":"riser_start"},{"t":29.6,"type":"whoosh"},{"t":31.8,"type":"boom"},{"t":32.6,"type":"whoosh"},
+ {"t":34.9,"type":"boom"},{"t":35.5,"type":"tick"},{"t":36.1,"type":"shimmer"}
+]

@@ -1,0 +1,443 @@
+[
+ {
+  "t": 0,
+  "type": "wind",
+  "end": 5.5,
+  "note": "aerial"
+ },
+ {
+  "t": 0,
+  "type": "birds",
+  "end": 24.9,
+  "note": "Naguru bed, low"
+ },
+ {
+  "t": 0.8,
+  "type": "reveal_swell",
+  "note": "opening title"
+ },
+ {
+  "t": 1,
+  "type": "shimmer",
+  "note": "title rule"
+ },
+ {
+  "t": 4.9,
+  "type": "long_whoosh",
+  "note": "cut down to the road"
+ },
+ {
+  "t": 5.5,
+  "type": "city",
+  "end": 18.7,
+  "note": "Naguru Vale Road, boda-boda"
+ },
+ {
+  "t": 5.5,
+  "type": "footsteps",
+  "end": 10.4,
+  "note": "guide on the verge (murram/tarmac)"
+ },
+ {
+  "t": 7.1,
+  "type": "tick",
+  "note": "caption NAGURU VALE ROAD"
+ },
+ {
+  "t": 11.6,
+  "type": "sliding_door",
+  "note": "main gate slides open"
+ },
+ {
+  "t": 12.4,
+  "type": "footsteps",
+  "end": 24,
+  "note": "through the gate, up the driveway"
+ },
+ {
+  "t": 13.3,
+  "type": "tick",
+  "note": "caption MAIN ENTRANCE"
+ },
+ {
+  "t": 23.3,
+  "type": "sliding_door",
+  "note": "lobby glass doors"
+ },
+ {
+  "t": 24.9,
+  "type": "room_tone",
+  "end": 43.1,
+  "note": "lobby"
+ },
+ {
+  "t": 24.9,
+  "type": "footsteps",
+  "end": 31,
+  "note": "lobby (stone floor)"
+ },
+ {
+  "t": 26.1,
+  "type": "tick",
+  "note": "caption LOBBY"
+ },
+ {
+  "t": 31.5,
+  "type": "footsteps",
+  "end": 33.2,
+  "note": "lift hall"
+ },
+ {
+  "t": 33.8,
+  "type": "tick",
+  "note": "guide presses the lift call button"
+ },
+ {
+  "t": 34.3,
+  "type": "sliding_door",
+  "note": "lift doors open (G)"
+ },
+ {
+  "t": 35.6,
+  "type": "footsteps",
+  "end": 37.3,
+  "note": "steps into the car"
+ },
+ {
+  "t": 38.6,
+  "type": "sliding_door",
+  "note": "lift doors close"
+ },
+ {
+  "t": 40,
+  "type": "whoosh",
+  "note": "lift moves (soft)"
+ },
+ {
+  "t": 40.7,
+  "type": "tick",
+  "note": "floor counter -> 1"
+ },
+ {
+  "t": 41.3,
+  "type": "tick",
+  "note": "floor counter -> 2"
+ },
+ {
+  "t": 41.9,
+  "type": "tick",
+  "note": "floor counter -> 3"
+ },
+ {
+  "t": 42.5,
+  "type": "tick",
+  "note": "floor counter -> 4"
+ },
+ {
+  "t": 43.1,
+  "type": "lift_ding",
+  "note": "level 4 (Tower B)"
+ },
+ {
+  "t": 43.1,
+  "type": "room_tone",
+  "end": 56.6,
+  "note": "1-bedroom"
+ },
+ {
+  "t": 43.1,
+  "type": "footsteps",
+  "end": 47,
+  "note": "corridor to the door"
+ },
+ {
+  "t": 43.15,
+  "type": "sliding_door",
+  "note": "lift doors open"
+ },
+ {
+  "t": 45.4,
+  "type": "door",
+  "note": "apartment door opens"
+ },
+ {
+  "t": 46.7,
+  "type": "tick",
+  "note": "caption 1 BEDROOM: LIVING ROOM"
+ },
+ {
+  "t": 47.3,
+  "type": "footsteps",
+  "end": 50.2,
+  "note": "into the lounge"
+ },
+ {
+  "t": 50.3,
+  "type": "tick",
+  "note": "caption 1 BEDROOM: KITCHEN"
+ },
+ {
+  "t": 51.6,
+  "type": "footsteps",
+  "end": 53.3,
+  "note": "to the balcony"
+ },
+ {
+  "t": 52.6,
+  "type": "glass_slide",
+  "note": "balcony door (already open: use quietly)"
+ },
+ {
+  "t": 53.5,
+  "type": "birds",
+  "end": 56.6,
+  "note": "balcony"
+ },
+ {
+  "t": 53.7,
+  "type": "tick",
+  "note": "caption 1 BEDROOM: BALCONY"
+ },
+ {
+  "t": 56.4,
+  "type": "whoosh",
+  "note": "cut: lift to level 6"
+ },
+ {
+  "t": 56.6,
+  "type": "lift_ding",
+  "note": "level 6"
+ },
+ {
+  "t": 56.6,
+  "type": "footsteps",
+  "end": 58.8,
+  "note": "corridor"
+ },
+ {
+  "t": 56.65,
+  "type": "sliding_door",
+  "note": "lift doors open"
+ },
+ {
+  "t": 58.8,
+  "type": "door",
+  "note": "2-bedroom door opens"
+ },
+ {
+  "t": 58.8,
+  "type": "room_tone",
+  "end": 69.3,
+  "note": "2-bedroom"
+ },
+ {
+  "t": 59.9,
+  "type": "footsteps",
+  "end": 62.6,
+  "note": "into the living room"
+ },
+ {
+  "t": 60.4,
+  "type": "tick",
+  "note": "caption 2 BEDROOMS: LIVING ROOM"
+ },
+ {
+  "t": 63.6,
+  "type": "tick",
+  "note": "caption 2 BEDROOMS: KITCHEN"
+ },
+ {
+  "t": 64.4,
+  "type": "footsteps",
+  "end": 65.4,
+  "note": "towards the bedroom"
+ },
+ {
+  "t": 67.2,
+  "type": "tick",
+  "note": "caption 2 BEDROOMS: BEDROOM"
+ },
+ {
+  "t": 69.1,
+  "type": "whoosh",
+  "note": "cut: lift to level 9"
+ },
+ {
+  "t": 69.3,
+  "type": "lift_ding",
+  "note": "level 9"
+ },
+ {
+  "t": 69.3,
+  "type": "footsteps",
+  "end": 71.6,
+  "note": "corridor"
+ },
+ {
+  "t": 69.35,
+  "type": "sliding_door",
+  "note": "lift doors open"
+ },
+ {
+  "t": 71.7,
+  "type": "door",
+  "note": "3-bedroom door opens"
+ },
+ {
+  "t": 71.7,
+  "type": "room_tone",
+  "end": 98.4,
+  "note": "3-bedroom"
+ },
+ {
+  "t": 72.7,
+  "type": "footsteps",
+  "end": 76.4,
+  "note": "kitchen to living room"
+ },
+ {
+  "t": 73.3,
+  "type": "tick",
+  "note": "caption 3 BEDROOMS: KITCHEN"
+ },
+ {
+  "t": 76.5,
+  "type": "tick",
+  "note": "caption 3 BEDROOMS: LIVING ROOM"
+ },
+ {
+  "t": 79.8,
+  "type": "footsteps",
+  "note": "3-bed corridor",
+  "end": 84.4
+ },
+ {
+  "t": 83.4,
+  "type": "tick",
+  "note": "caption CLOAKROOM"
+ },
+ {
+  "t": 86.2,
+  "type": "footsteps",
+  "note": "into the main bedroom",
+  "end": 88.5
+ },
+ {
+  "t": 87.2,
+  "type": "tick",
+  "note": "caption MAIN BEDROOM"
+ },
+ {
+  "t": 90.6,
+  "type": "tick",
+  "note": "caption BATHROOM"
+ },
+ {
+  "t": 92.9,
+  "type": "footsteps",
+  "note": "onto the balcony",
+  "end": 95.1
+ },
+ {
+  "t": 93.0,
+  "type": "birds",
+  "note": "balcony",
+  "end": 98.4
+ },
+ {
+  "t": 93.2,
+  "type": "wind",
+  "note": "height breeze",
+  "end": 98.4
+ },
+ {
+  "t": 94.1,
+  "type": "tick",
+  "note": "caption BALCONY"
+ },
+ {
+  "t": 98.2,
+  "type": "long_whoosh",
+  "note": "cut down to the pool"
+ },
+ {
+  "t": 98.4,
+  "type": "water",
+  "note": "pool",
+  "end": 105.1
+ },
+ {
+  "t": 98.4,
+  "type": "birds",
+  "note": "outdoor",
+  "end": 124.1
+ },
+ {
+  "t": 98.4,
+  "type": "footsteps",
+  "note": "pool deck",
+  "end": 103.3
+ },
+ {
+  "t": 99.2,
+  "type": "tick",
+  "note": "caption SWIMMING POOL"
+ },
+ {
+  "t": 104.9,
+  "type": "whoosh",
+  "note": "cut up to the roof"
+ },
+ {
+  "t": 105.1,
+  "type": "wind",
+  "note": "rooftop",
+  "end": 124.1
+ },
+ {
+  "t": 105.1,
+  "type": "footsteps",
+  "note": "roof deck",
+  "end": 112.2
+ },
+ {
+  "t": 105.9,
+  "type": "tick",
+  "note": "caption ROOF TERRACE"
+ },
+ {
+  "t": 109.1,
+  "type": "tick",
+  "note": "caption ROOFTOP KITCHEN"
+ },
+ {
+  "t": 112.6,
+  "type": "riser",
+  "note": "into the crane-up"
+ },
+ {
+  "t": 115.6,
+  "type": "long_whoosh",
+  "note": "crane up"
+ },
+ {
+  "t": 119.6,
+  "type": "boom",
+  "note": "end title"
+ },
+ {
+  "t": 119.8,
+  "type": "reveal_swell",
+  "note": "end title"
+ },
+ {
+  "t": 120.4,
+  "type": "shimmer",
+  "note": "gold rule"
+ },
+ {
+  "t": 121.0,
+  "type": "pop",
+  "note": "Blackstone line"
+ }
+]

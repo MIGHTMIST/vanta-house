@@ -1,0 +1,211 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>html,body{margin:0;background:#101012;overflow:hidden}#stage{position:relative;width:100vw;height:100vh}#stage canvas{position:absolute;left:0;top:0;width:100%;height:100%}</style></head>
+<body><div id="stage"><canvas id="gl"></canvas><canvas id="ui"></canvas></div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { buildVanta, makeRenderer, makeSky, lighting, makePeople, viewportSize, planTexture, GOLD, GOLD_HI, IVORY, INK } from './vanta3d.js';
+const { w: W, h: H } = viewportSize(); const U = W / 1080;
+const gl = document.getElementById('gl'), ui = document.getElementById('ui'); ui.width = W; ui.height = H; const g2 = ui.getContext('2d');
+const renderer = makeRenderer(THREE, gl);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const vanta = buildVanta(THREE, { people: 14, mood: 'day' }); scene.add(vanta.group);
+const FONT = `Inter, 'DejaVu Sans', Arial, sans-serif`;
+try { await Promise.all(['300','500','600'].map(w => document.fonts.load(`${w} 40px Inter`))); } catch (e) {}
+const SC = 1 / 18.3, pm = (x, y) => [(x - 400) * SC, (y - 600) * SC];
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const sstep = (a, b, x) => { const u = clamp((x - a) / (b - a)); return u * u * (3 - 2 * u); };
+const eo3 = u => 1 - Math.pow(1 - clamp(u), 3), eio = u => { u = clamp(u); return u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; };
+const eoBack = u => { u = clamp(u); const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); };
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// extra people (more life): pool south strip, court, gate drive, front court loop
+const extra = [
+  makePeople(THREE, 9, { poolA: [[14.6, -5.7], [26.5, -5.7]], poolB: [[15.5, -6.4], [27, -6.4]], poolC: [[26, -5.5], [14.4, -5.9]] }, { seed: 21 }),
+  makePeople(THREE, 6, { driveA: [[30, -2.4], [8.5, -2.6]], driveB: [[31, -0.6], [12, 0.6]], courtLoop: [[22, 8], [31, 8], [31, 16], [22, 16]] }, { seed: 33, closed: ['courtLoop'] }),
+  makePeople(THREE, 4, { rampWalk: [[33, 6], [33, 12], [37, 18]], courtB: [[20, 20], [30, 19]] }, { seed: 45 }),
+];
+extra.forEach(p => vanta.site.group.add(p.group));
+const pplGroups = [vanta.site.people.group, ...extra.map(p => p.group)], carGroup = vanta.site.cars.group;
+
+vanta.group.traverse(o => { if (o.name === 'poolLawn' || o.name === 'plotBase') o.visible = false; });
+{ const P2 = (a) => a.map(q => pm(q[0], q[1])); const sh = new THREE.Shape(); vanta.site.polygon.forEach((q, i) => i ? sh.lineTo(q[0], -q[1]) : sh.moveTo(q[0], -q[1]));
+  for (const hole of [P2([[1047,792],[1158,792],[1280,930],[1047,930]]), P2([[650,250],[650,445],[668,468],[838,468]])]) { const hp = new THREE.Path(); hole.forEach((q, i) => i ? hp.lineTo(q[0], -q[1]) : hp.moveTo(q[0], -q[1])); sh.holes.push(hp); }
+  const gg = new THREE.ShapeGeometry(sh); gg.rotateX(-Math.PI / 2); const base = new THREE.Mesh(gg, vanta.materials.paver); base.receiveShadow = true; vanta.site.group.add(base); }
+{ const P = (a) => a.map(q => pm(q[0], q[1])); const sh = new THREE.Shape(); P([[600,215],[645,195],[925,516],[600,530]]).forEach((q, i) => i ? sh.lineTo(q[0], -q[1]) : sh.moveTo(q[0], -q[1]));
+  const hp = new THREE.Path(); P([[650,250],[650,445],[668,468],[838,468]]).forEach((q, i) => i ? hp.lineTo(q[0], -q[1]) : hp.moveTo(q[0], -q[1])); sh.holes.push(hp);
+  const gg = new THREE.ShapeGeometry(sh); gg.rotateX(-Math.PI / 2); const lawn = new THREE.Mesh(gg, vanta.materials.grass); lawn.position.y = .025; lawn.receiveShadow = true; vanta.site.group.add(lawn); }
+// flip downward-facing ground quads (the library's strip() winding is back-facing from above -> lit as underside)
+{ const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  vanta.group.traverse(o => { if (!o.isMesh || !o.geometry.index || o.geometry.index.count !== 6 || o.geometry.attributes.position.count !== 4) return; const p = o.geometry.attributes.position, ix = o.geometry.index.array;
+    a.fromBufferAttribute(p, ix[0]); b.fromBufferAttribute(p, ix[1]); c.fromBufferAttribute(p, ix[2]); if (b.sub(a).cross(c.sub(a)).y < 0 && Math.abs(c.y - a.y) < .01) { const arr = Array.from(ix); o.geometry.setIndex([arr[0], arr[2], arr[1], arr[3], arr[5], arr[4]]); } }); }
+// remove palms standing in the gate mouth / driveway (model clutter): trunk idx 15+k, fronds k*10..k*10+9
+{ const kids = vanta.site.trees.group.children, trunk = kids[0], frond = kids[2], z = new THREE.Matrix4().makeScale(0, 0, 0);
+  [0, 3, 4].forEach(k => { trunk.setMatrixAt(15 + k, z); for (let j = 0; j < 10; j++) frond.setMatrixAt(k * 10 + j, z); }); trunk.instanceMatrix.needsUpdate = frond.instanceMatrix.needsUpdate = true; }
+// ---- sky / light with golden-hour blend
+makeSky(THREE, scene, 'day'); const lights = lighting(THREE, scene, 'day', { renderer, materials: vanta.materials, shadowSize: 3072, shadowRadius: 110 }); vanta.setMood('day');
+const sky = scene.getObjectByName('sky'); const target = new THREE.Object3D(); target.position.set(8, 8, 0); scene.add(target); lights.key.target = target;
+const cDay = { top: new THREE.Color('#5d95d6'), mid: new THREE.Color('#a9cdee'), hor: new THREE.Color('#eaf2f7'), fog: new THREE.Color(0xdfe9ef), key: new THREE.Color(0xfff5e8), hemi: new THREE.Color(0xbfd8ff) };
+const cGold = { top: new THREE.Color('#5f7cb8'), mid: new THREE.Color('#e9b08a'), hor: new THREE.Color('#ffd6a0'), fog: new THREE.Color(0xf0cfa8), key: new THREE.Color(0xffb26a), hemi: new THREE.Color(0xd9b79a) };
+const dDay = new THREE.Vector3(70, 95, 55).normalize(), dGold = new THREE.Vector3(0.55, 0.27, 0.8).normalize();
+function setSun(g, t) {
+  const sc = lights.key.shadow.camera, Rr = lerp(62, 112, sstep(29.5, 33, t)); sc.left = -Rr; sc.right = Rr; sc.top = Rr; sc.bottom = -Rr; sc.updateProjectionMatrix();
+  target.position.set(lerp(16, 8, sstep(29.5, 33, t)), 6, lerp(-2, 0, sstep(29.5, 33, t)));
+  const u = sky.material.uniforms; ['top', 'mid', 'hor'].forEach(k => u[k].value.copy(cDay[k]).lerp(cGold[k], g));
+  scene.fog.color.copy(cDay.fog).lerp(cGold.fog, g); scene.background.copy(u.mid.value);
+  const d = dDay.clone().lerp(dGold, g).normalize(); lights.key.position.copy(target.position).addScaledVector(d, 170);
+  lights.key.color.copy(cDay.key).lerp(cGold.key, g); lights.key.intensity = lerp(2.5, 3.0, g);
+  lights.hemi.color.copy(cDay.hemi).lerp(cGold.hemi, g); lights.hemi.intensity = lerp(.8, .55, g); lights.fill.intensity = lerp(.5, .3, g);
+}
+
+// ---- the drawing on the ground (aligned by site.jpg pixel -> metres)
+const planTex = await planTexture(THREE, './s3_plan.png');
+const CROP = [0, 0, 1290, 1060], pc = pm((CROP[0] + CROP[2]) / 2, (CROP[1] + CROP[3]) / 2);
+const planMat = new THREE.MeshBasicMaterial({ map: planTex, transparent: true, depthWrite: false, toneMapped: false, fog: false });
+const plan = new THREE.Mesh(new THREE.PlaneGeometry((CROP[2] - CROP[0]) * SC, (CROP[3] - CROP[1]) * SC), planMat); plan.rotation.x = -Math.PI / 2; plan.position.set(pc[0], .3, pc[1]); plan.renderOrder = 2; scene.add(plan);
+const backMat = new THREE.MeshBasicMaterial({ color: INK, transparent: true, depthWrite: false, toneMapped: false, fog: false });
+const back = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), backMat); back.rotation.x = -Math.PI / 2; back.position.set(pc[0], .2, pc[1]); back.renderOrder = 1; scene.add(back);
+// gold boundary ribbon
+const bp = vanta.site.boundaryPoints.map(v => [v.x, v.z]); const loop = bp.concat([bp[0]]);
+const segLen = []; let perim = 0; for (let i = 0; i < 4; i++) { const l = Math.hypot(loop[i + 1][0] - loop[i][0], loop[i + 1][1] - loop[i][1]); segLen.push(l); perim += l; }
+const ribGeo = new THREE.BufferGeometry(); const ribPos = new Float32Array(4 * 4 * 3); ribGeo.setAttribute('position', new THREE.BufferAttribute(ribPos, 3)); ribGeo.setIndex([...Array(4).keys()].flatMap(i => [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3]));
+const ribMat = new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, side: THREE.DoubleSide, depthWrite: false, toneMapped: false, fog: false });
+const rib = new THREE.Mesh(ribGeo, ribMat); rib.frustumCulled = false; rib.renderOrder = 3; scene.add(rib);
+let tipXZ = [0, 0];
+function setRibbon(frac) {
+  let rem = frac * perim; const hw = .5; ribPos.fill(0);
+  for (let i = 0; i < 4; i++) {
+    const a = loop[i], b = loop[i + 1], L = segLen[i]; const f = clamp(rem / L); rem -= L; if (f <= 0) continue;
+    const dx = (b[0] - a[0]) / L, dz = (b[1] - a[1]) / L, nx = -dz * hw, nz = dx * hw; const e = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; tipXZ = e;
+    const p0 = [a[0] - dx * hw, a[1] - dz * hw], p1 = [e[0] + (f >= 1 ? dx * hw : 0), e[1] + (f >= 1 ? dz * hw : 0)];
+    const v = [[p0[0] + nx, p0[1] + nz], [p1[0] + nx, p1[1] + nz], [p1[0] - nx, p1[1] - nz], [p0[0] - nx, p0[1] - nz]];
+    v.forEach((q, k) => { ribPos[(i * 4 + k) * 3] = q[0]; ribPos[(i * 4 + k) * 3 + 1] = .45; ribPos[(i * 4 + k) * 3 + 2] = q[1]; });
+  }
+  ribGeo.attributes.position.needsUpdate = true;
+}
+// 3D road label (flat on the road)
+const rd = vanta.site.road.geometry; const sGate = ((vanta.dims.gate[0] - rd.A[0]) * rd.u[0] + (vanta.dims.gate[1] - rd.A[1]) * rd.u[1]);
+const roadP = (s, off, y = 0) => { const p = rd.at(s, off); return [p[0], y, p[1]]; };
+const lc = document.createElement('canvas'); lc.width = 2048; lc.height = 256; { const g = lc.getContext('2d'); g.font = `600 150px ${FONT}`; g.letterSpacing = '40px'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#8C6A2F'; g.fillText('NAGURU VALE ROAD', 1024 + 20, 130); }
+const ltex = new THREE.CanvasTexture(lc); ltex.colorSpace = THREE.SRGBColorSpace; ltex.anisotropy = 8;
+const labMat = new THREE.MeshBasicMaterial({ map: ltex, transparent: true, depthWrite: false, toneMapped: false, fog: false });
+const roadLab = new THREE.Mesh(new THREE.PlaneGeometry(32, 4), labMat); roadLab.rotation.order = 'YXZ'; roadLab.rotation.x = -Math.PI / 2; roadLab.rotation.y = -Math.atan2(rd.u[1], rd.u[0]); { const c = rd.at(sGate - 10, 12.2); roadLab.position.set(c[0], .06, c[1]); } roadLab.renderOrder = 4; scene.add(roadLab);
+
+// ---- camera keyframes [t, px,py,pz, lx,ly,lz, fov]
+const R = (ds, off, y) => roadP(sGate + ds, off, y);
+const K = [
+  [0, 14, 184, -3, 18, 0, -3, 34],
+  [5.2, 11, 168, -3.5, 16, 0, -3.5, 34],
+  [6.4, 3, 130, -6, 14, 2, -4, 35],
+  [8.0, -52, 108, -88, 14, 12, -4, 36],
+  [9.7, -12, 50, -80, 14, 5, -16, 40],
+  [11.0, ...R(-46, 11, 12), ...R(-14, 2, 4), 42],
+  [13.2, ...R(-24, 11, 10.5), ...R(2, 2, 3), 46],
+  [15.0, ...R(-4, 9.5, 8), ...R(8, 0, 3.0), 50],
+  [16.4, ...R(3.0, 7.5, 6.2), 25, 3.0, -.8, 50],
+  [17.6, ...R(3.6, 0.5, 4.8), 22, 3.2, -.8, 52],
+  [18.8, 27.5, 5.0, -1.0, 10, 9, .3, 52],
+  [20.0, 23.5, 6.5, -1.2, 6, 12, .4, 52],
+  [21.2, 19.5, 8.5, -2.0, 4, 13, .4, 52],
+  [22.4, 17.5, 8.2, -6.0, 22, 0, -11, 52],
+  [23.8, 15.0, 6.8, -11.5, 22, 0, -9, 52],
+  [25.0, 19.5, 8.5, -12, 24.5, 0, -4, 52],
+  [26.4, 27.5, 10.2, -6, 36, -1, 9, 52],
+  [27.6, 31.5, 10.5, 1.5, 40, -1, 14, 52],
+  [28.8, 38.5, 10.5, 5.5, 42.5, -1, 14.5, 50],
+  [30.0, 27, 24, 9.5, 12, 26, 9, 48],
+  [31.8, 49, 47, 9, 15.3, 43.5, 10, 42],
+  [34.0, 112, 78, -36, 14, 20, 0, 37],
+  [38.0, 205, 108, -90, 8, 12, -3, 38],
+];
+const P = (a, b, tt) => { /* helper */ };
+function sampleCam(t) {
+  t = clamp(t, K[0][0], K[K.length - 1][0]); let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
+  const k0 = K[i], k1 = K[i + 1], h = k1[0] - k0[0], u = (t - k0[0]) / h, u2 = u * u, u3 = u2 * u;
+  const h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+  const km = K[i - 1], kp = K[i + 2]; const out = [];
+  for (let c = 1; c <= 7; c++) {
+    const m0 = km ? (k1[c] - km[c]) / (k1[0] - km[0]) : (k1[c] - k0[c]) / h, m1 = kp ? (kp[c] - k0[c]) / (kp[0] - k0[0]) : (k1[c] - k0[c]) / h;
+    out.push(h00 * k0[c] + h10 * h * m0 + h01 * k1[c] + h11 * h * m1);
+  }
+  return out;
+}
+const cam = new THREE.PerspectiveCamera(34, W / H, 0.5, 2500);
+window.DURATION = 38; window.__cam = cam;
+
+// ---- 2D overlay helpers
+function textAt(txt, x, y, o = {}) {
+  g2.save(); g2.font = `${o.w || 600} ${(o.size || 30) * U}px ${FONT}`; g2.letterSpacing = ((o.ls ?? 7) * U) + 'px'; g2.textAlign = o.align || 'center'; g2.textBaseline = 'alphabetic';
+  g2.fillStyle = o.color || IVORY; g2.shadowColor = o.shadow || 'rgba(8,8,10,.65)'; g2.shadowBlur = (o.blur ?? 10) * U; g2.globalAlpha *= (o.a ?? 1);
+  g2.fillText(txt, x, y); g2.restore();
+}
+function measure(txt, size, w, ls) { g2.save(); g2.font = `${w} ${size * U}px ${FONT}`; g2.letterSpacing = (ls * U) + 'px'; const m = g2.measureText(txt).width; g2.restore(); return m; }
+const win = (t, a, b, fi = .6, fo = .6) => sstep(a, a + fi, t) * (1 - sstep(b - fo, b, t));
+const v3 = new THREE.Vector3();
+function proj(x, y, z) { v3.set(x, y, z).project(cam); if (v3.z > 1 || v3.z < -1) return null; return [(v3.x * .5 + .5) * W, (-v3.y * .5 + .5) * H]; }
+function callout(t, a, b, label, anc, dx, dy) {
+  const k = win(t, a, b, .7, .6); if (k <= 0.001) return; const p = proj(...anc); if (!p) return;
+  const size = 31, ls = 7, tw = measure(label, size, 600, ls) - ls * U; const grow = eo3(k * 1.25);
+  const tx0 = clamp(p[0] + dx * U, 60 * U + tw / 2, W - 60 * U - tw / 2), ty = clamp(p[1] + dy * U, 330 * U, 1420 * U);
+  g2.save(); g2.globalAlpha = k; g2.strokeStyle = GOLD_HI; g2.lineWidth = 2.4 * U; g2.shadowColor = 'rgba(8,8,10,.55)'; g2.shadowBlur = 6 * U;
+  const ex = tx0, ey = ty; // line: anchor -> elbow vertical -> underline
+  g2.beginPath(); g2.moveTo(p[0], p[1]); g2.lineTo(p[0] + (ex - p[0]) * grow, p[1] + (ey - p[1]) * grow); g2.stroke();
+  g2.beginPath(); g2.moveTo(ex - tw / 2 - 12 * U, ey); g2.lineTo(ex - tw / 2 - 12 * U + (tw + 24 * U) * grow, ey); g2.stroke();
+  g2.fillStyle = GOLD_HI; g2.beginPath(); g2.arc(p[0], p[1], 7 * U, 0, 7); g2.fill(); g2.strokeStyle = 'rgba(214,178,110,.5)'; g2.lineWidth = 2 * U; g2.beginPath(); g2.arc(p[0], p[1], (13 + 5 * Math.sin(t * 5)) * U, 0, 7); g2.stroke(); g2.restore();
+  g2.save(); g2.globalAlpha = k * clamp((grow - .35) / .65); textAt(label, ex, ey - 16 * U + (1 - clamp(grow)) * 10 * U, { size, ls }); g2.restore();
+}
+
+// ---- main
+const lift = () => { vanta.materials.road.color.set('#5A5B61'); vanta.materials.asphalt.color.set('#64656B'); };
+window.renderAt = (t) => { lift();
+  // scene state
+  vanta.update(t); extra.forEach(p => p.update(t));
+  // building cascade
+  vanta.floors.forEach((f, i) => {
+    const t0 = 5.4 + i * .19, s = eo3((t - t0) / .55);
+    if (s <= 0.001) { f.group.visible = false; return; } f.group.visible = true; f.group.scale.y = Math.max(.001, s); f.group.position.y = f.yBase * (1 - s) * 1;
+  });
+  vanta.floors[0].group.visible = t > 5.3;
+  const ts = eoBack((t - 6.7) / .9); vanta.site.trees.group.scale.y = Math.max(.001, ts); vanta.site.trees.group.visible = t > 6.7;
+  const wl = eio((t - 7.3) / 1.8); vanta.site.pool.water.position.y = lerp(-1.3, -.1, wl);
+  const pp = eoBack((t - 8.3) / .8); pplGroups.forEach(g => { g.scale.y = Math.max(.001, pp); g.visible = t > 8.3; }); carGroup.scale.y = Math.max(.001, eoBack((t - 8.7) / .8)); carGroup.visible = t > 8.7;
+  const pf = sstep(6.0, 9.4, t); planMat.opacity = 1 - pf; backMat.opacity = 1 - pf; plan.visible = back.visible = pf < 1;
+  labMat.opacity = win(t, 1.4, 8.2, .8, 1.4); roadLab.visible = labMat.opacity > 0.01;
+  const bf = eio((t - 1.2) / 2.7); setRibbon(bf); ribMat.opacity = 1 - sstep(8.0, 10.4, t); rib.visible = ribMat.opacity > .01 && bf > 0;
+  setSun(sstep(28.5, 34.5, t), t);
+  // camera
+  let c = sampleCam(t); if (window.__ov) c = window.__ov; cam.position.set(c[0], c[1], c[2]); cam.fov = c[6]; cam.updateProjectionMatrix(); cam.lookAt(c[3], c[4], c[5]); cam.updateMatrixWorld();
+  renderer.render(scene, cam);
+  // overlay
+  g2.clearRect(0, 0, W, H); g2.globalAlpha = 1;
+  // top gradient for beat 1 text
+  const gk = win(t, .2, 5.4, .6, .8);
+  if (gk > 0) { const gr = g2.createLinearGradient(0, 200 * U, 0, 600 * U); gr.addColorStop(0, `rgba(16,16,18,${.92 * gk})`); gr.addColorStop(.6, `rgba(16,16,18,${.7 * gk})`); gr.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = gr; g2.fillRect(0, 200 * U, W, 400 * U); }
+  { const k = win(t, .6, 5.0, .8, .7); if (k > 0) { g2.save(); g2.globalAlpha = k; const dy = (1 - eo3(t / 1.4)) * 14 * U;
+      textAt('One site in Naguru.', W / 2, 360 * U + dy, { size: 80, w: 300, ls: 1, blur: 8 }); }
+    g2.restore(); const k2 = win(t, 1.3, 5.0, .8, .7); if (k2 > 0) { g2.save(); g2.globalAlpha = k2; textAt('FROM THE APPROVED SITE PLAN', W / 2, 428 * U, { size: 25, w: 500, ls: 8, color: GOLD_HI }); g2.restore(); } }
+  // tip glow of the boundary
+  if (bf > 0 && bf < 1) { const p = proj(tipXZ[0], .45, tipXZ[1]); if (p) { const gg = g2.createRadialGradient(p[0], p[1], 0, p[0], p[1], 38 * U); gg.addColorStop(0, 'rgba(255,230,170,.95)'); gg.addColorStop(1, 'rgba(214,178,110,0)'); g2.fillStyle = gg; g2.fillRect(p[0] - 40 * U, p[1] - 40 * U, 80 * U, 80 * U); } }
+  callout(t, 14.8, 17.7, 'MAIN ENTRANCE GATE', [31.9, 2.9, -1.3], -40, -250);
+  callout(t, 18.6, 21.6, 'TWO RESIDENTIAL BLOCKS', [6.0, 9, 1.1], 40, -300);
+  callout(t, 22.6, 26.0, 'SWIMMING POOL', [19, 0.2, -10], 0, 290);
+  callout(t, 27.0, 29.6, 'BASEMENT PARKING', [41, -.5, 13], -30, -260);
+  // end title
+  const ek = sstep(34.2, 35.6, t);
+  if (ek > 0) {
+    const gr = g2.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, `rgba(16,16,18,${.55 * ek})`); gr.addColorStop(.5, `rgba(16,16,18,${.82 * ek})`); gr.addColorStop(1, `rgba(16,16,18,${.86 * ek})`); g2.fillStyle = gr; g2.fillRect(0, 0, W, H);
+    const a1 = sstep(34.9, 36.0, t), a2 = sstep(35.5, 36.5, t), a3 = sstep(36.1, 37.1, t), cy = 880 * U;
+    g2.save(); g2.globalAlpha = a1; textAt('VANTA HOUSE', W / 2 + 6 * U, cy + (1 - a1) * 16 * U, { size: 108, w: 600, ls: 16, blur: 14 }); g2.restore();
+    g2.save(); g2.globalAlpha = a2; g2.fillStyle = GOLD_HI; const lw = 150 * U * eo3(a2); g2.fillRect(W / 2 - lw / 2, cy + 52 * U, lw, 3 * U); textAt('NAGURU, KAMPALA', W / 2 + 5 * U, cy + 124 * U, { size: 38, w: 500, ls: 11, color: GOLD_HI }); g2.restore();
+    g2.save(); g2.globalAlpha = a3; textAt('Blackstone Real Estate', W / 2, cy + 200 * U, { size: 27, w: 400, ls: 5, color: IVORY, a: .85 }); g2.restore();
+  }
+  // permanent note
+  { const gr = g2.createLinearGradient(0, H - 150 * U, 0, H); gr.addColorStop(0, 'rgba(16,16,18,0)'); gr.addColorStop(1, 'rgba(16,16,18,.5)'); g2.fillStyle = gr; g2.fillRect(0, H - 150 * U, W, 150 * U);
+    textAt('3D illustration from the approved drawings. Not the final appearance.', 44 * U, H - 62 * U, { size: 23, w: 400, ls: .4, align: 'left', a: .6, blur: 6 }); }
+  return true;
+};
+window.__geo = () => ({ n: vanta.blocks.north.polygon, s: vanta.blocks.south.polygon, trees: vanta.site.trees.positions, plot: bp, gate: vanta.dims.gate,
+  path: Array.from({length: 381}, (_, i) => { const c = sampleCam(i / 10); return [i / 10, ...c]; }), sGate, A: rd.A, u: rd.u, nn: rd.n });
+window.ready = true;
+</script></body></html>

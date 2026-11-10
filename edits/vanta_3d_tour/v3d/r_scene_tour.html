@@ -1,0 +1,198 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>html,body{margin:0;background:#101012;overflow:hidden}#stage{position:relative;width:100vw;height:100vh}#stage canvas{position:absolute;left:0;top:0;width:100%;height:100%}</style></head>
+<body><div id="stage"><canvas id="gl"></canvas><canvas id="ui"></canvas></div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+// Vanta House guided tour: a guide walks the site, the lobby, the lift, a 1-, 2- and 3-bedroom home, the pool and the roof terrace.
+// Shot-based (cuts between places), renderAt(t) pure in t.
+import * as THREE from 'three';
+import * as V from './r_vanta3d.js';
+import * as I from './r_interior.js';
+import { buildUnits, U1, U3 } from './r_units.js';
+import { loadGLB, makeHuman, GUIDE_PALETTE } from './r_people2.js';
+const { w: W, h: H } = V.viewportSize(); const U = W / 1080;
+const gl = document.getElementById('gl'), ui = document.getElementById('ui'); ui.width = W; ui.height = H; const g2 = ui.getContext('2d');
+const renderer = V.makeRenderer(THREE, gl); window.__R = renderer;
+const scene = new THREE.Scene(); window.__scene = scene;
+const vanta = V.buildVanta(THREE, { people: 'film', customZones: [{ level: U1.level, rect: U1.zone }, { level: U3.level, rect: U3.zone }] }); scene.add(vanta.group); vanta.floors[0].group.visible = false; window.__v = vanta;
+const INT = I.buildInteriors(THREE, vanta); scene.add(INT.group); window.__I = INT;
+const UN = buildUnits(THREE, INT, vanta); window.__UN = UN;
+V.makeSky(THREE, scene, 'day'); const LT = V.lighting(THREE, scene, 'day', { renderer, materials: vanta.materials });
+const ENV_SKY = scene.getObjectByName('sky');
+const cam = new THREE.PerspectiveCamera(50, W / H, 0.06, 7000);
+const Y6 = I.ROOMS.living[2], Y4 = U1.y, Y9 = U3.y, YR = V.LEVELS.roof;
+// ------------------------------------------------------------------ characters: the guide + rigged passers-by
+const ADV = await loadGLB('adventurer'), WK = await loadGLB('worker');
+const guide = makeHuman(ADV, { palette: GUIDE_PALETTE, hide: ['Backpack'], height: 1.8 }); scene.add(guide.group);
+const WSPEED = 1.268;   // m/s covered by one second of the 'Walk' clip (measured from the stance foot)
+const extras = [
+  { sh: '#C9473A', pa: '#2E3B55', sk: '#4E3222', h: 1.74 }, { sh: '#F2EFE6', pa: '#8B7F68', sk: '#7A5038', h: 1.80 }, { sh: '#2F5D50', pa: '#24262B', sk: '#5A3A27', h: 1.70 },
+  { sh: '#1F2A3C', pa: '#C8BCA2', sk: '#6B4532', h: 1.77 }, { sh: '#E3D7BF', pa: '#3A3F4A', sk: '#3C271B', h: 1.83 }, { sh: '#8BA3B8', pa: '#24262B', sk: '#55372A', h: 1.72 },
+].map(c => { const m = makeHuman(WK, { palette: { Shirt: c.sh, Pants: c.pa, Skin: c.sk, Hair: '#15110e', Socks: '#e8e4dc', Eyes: '#222' }, height: c.h, nativeHeight: 4.83 }); scene.add(m.group); return m; });
+// ------------------------------------------------------------------ helpers
+const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const lerp = (a, b, u) => a + (b - a) * u, angLerp = (a, b, u) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * u; };
+const plen = (p) => { let L = 0; for (let i = 1; i < p.length; i++) L += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return L; };
+function pAt(p, s) { let acc = 0; for (let i = 1; i < p.length; i++) { const a = p[i - 1], b = p[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (s <= acc + L || i === p.length - 1) { const u = Math.max(0, Math.min(1, (s - acc) / (L || 1))); return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; } acc += L; } return p[p.length - 1]; }
+// guide script: segments run back to back from t=0 of the shot.  {walk:[[x,z]...], v} {idle:d} {act:'Interact'|'Wave', d} {turn:heading, d}
+function script(y, start, segs) { let t = 0, pos = start.slice(0, 2), hd = start[2]; const S = [];
+  for (const s of segs) { const g = { ...s, t0: t, p0: pos.slice(), h0: hd };
+    if (s.walk) { const pts = [pos, ...s.walk]; g.pts = pts; g.L = plen(pts); g.v = s.v || 1.38; g.d = g.L / g.v; const e = pts[pts.length - 1], f = pts[pts.length - 2]; pos = e.slice(); hd = Math.atan2(e[0] - f[0], e[1] - f[1]); }
+    else if (s.turn != null) { g.d = s.d || .8; hd = s.turn; } else { g.d = s.d || 1; }
+    g.t1 = t + g.d; g.h1 = hd; g.p1 = pos.slice(); t = g.t1; S.push(g); }
+  const total = t; let walked = 0; S.forEach(g => { g.s0 = walked; if (g.walk) walked += g.L; });
+  return { total, at(u) { u = Math.max(0, u); let g = S.find(q => u < q.t1) || S[S.length - 1]; const lu = Math.min(u, g.t1) - g.t0;
+      let x, z, heading, clips; const idleT = u + 3.1;
+      if (g.walk) { // ease the first/last .45 s (accelerate / settle), heading follows the path with look-ahead
+        const ac = .45, d = g.d, vv = g.v; let s; if (lu < ac) s = vv * lu * lu / (2 * ac); else if (lu > d - ac) { const r = d - lu; s = g.L - vv * r * r / (2 * ac); } else s = vv * (lu - ac / 2);
+        s = Math.max(0, Math.min(g.L, s)); [x, z] = pAt(g.pts, s); const a = pAt(g.pts, Math.max(0, s - .5)), b = pAt(g.pts, Math.min(g.L, s + .7)); const ph = Math.atan2(b[0] - a[0], b[1] - a[1]);
+        heading = angLerp(g.h0, ph, ss(0, .45, lu)); const ws = Math.min(1, ss(0, .35, lu) * (1 - ss(d - .3, d, lu)) + .0); clips = [['Walk', (g.s0 + s) / WSPEED, Math.max(.001, ws)], ['Idle', idleT, 1 - ws]]; }
+      else if (g.turn != null) { [x, z] = g.p0; heading = angLerp(g.h0, g.turn, ease(Math.min(1, lu / g.d))); clips = [['Walk', lu * .5, .25], ['Idle', idleT, .75]]; }
+      else if (g.act) { [x, z] = g.p0; heading = g.h0; const w = ss(0, .2, lu) * (1 - ss(g.d - .25, g.d, lu)); clips = [[g.act, lu * (g.rate || 1), Math.max(.001, w)], ['Idle', idleT, 1 - w]]; }
+      else { [x, z] = g.p0; heading = g.h0; clips = [['Idle', idleT, 1]]; }
+      return { x, y, z, heading, clips }; } };
+}
+// camera rigs (pure): follow behind with lag / lead in front / fixed keys
+function follow(sc, u, o = {}) { const lag = o.lag ?? .7, g0 = sc.at(u - lag), g1 = sc.at(u), h = g0.heading + (o.orbit || 0), d = o.dist ?? 2.4;
+  const p = [g0.x - Math.sin(h) * d + Math.cos(h) * (o.side || 0), g0.y + (o.h ?? 1.65), g0.z - Math.cos(h) * d - Math.sin(h) * (o.side || 0)];
+  const l = [g1.x + Math.sin(g1.heading) * (o.ahead ?? 2.0), g1.y + (o.lh ?? 1.35), g1.z + Math.cos(g1.heading) * (o.ahead ?? 2.0)]; return { p, l }; }
+function lead(sc, u, o = {}) { const g = sc.at(u + (o.lead ?? .5)), gn = sc.at(u), h = g.heading, d = o.dist ?? 2.6;
+  const p = [g.x + Math.sin(h) * d + Math.cos(h) * (o.side || 0), g.y + (o.h ?? 1.6), g.z + Math.cos(h) * d - Math.sin(h) * (o.side || 0)]; const l = [gn.x, gn.y + (o.lh ?? 1.3), gn.z]; return { p, l }; }
+function keys(K, u) { let i = 0; while (i < K.length - 2 && u > K[i + 1][0]) i++; const a = K[i], b = K[i + 1], v = ease(Math.max(0, Math.min(1, (u - a[0]) / (b[0] - a[0]))));
+  return { p: a[1].map((q, j) => lerp(q, b[1][j], v)), l: a[2].map((q, j) => lerp(q, b[2][j], v)), fov: lerp(a[3] ?? 50, b[3] ?? 50, v), shift: lerp(a[4] ?? 1, b[4] ?? 1, v) }; }
+const mixCam = (A, B, w) => ({ p: A.p.map((q, j) => lerp(q, B.p[j], w)), l: A.l.map((q, j) => lerp(q, B.l[j], w)) });
+// ------------------------------------------------------------------ the shots
+const rd = vanta.dims.road, sG = vanta.dims.sGate, RA = (s, off) => rd.at(s, off);
+const SH = [];
+const shot = (d, o) => { const t0 = SH.length ? SH[SH.length - 1].t1 : 0; SH.push({ t0, t1: t0 + d, ...o }); };
+// 1 hero aerial
+shot(5.5, { zone: 'out', R: 115, cam: (u) => keys([[0, [150, 92, -128], [3, 16, 0], 30, 0], [5.5, [112, 60, -82], [5, 14, 1], 32, .2]], u) });
+// 2 Naguru Vale Road: the guide walks along the verge towards the gate
+const sc2 = script(0, [...RA(sG + 13, 2.9), Math.atan2(-rd.u[0], -rd.u[1])], [{ walk: [RA(sG + 7, 2.7), RA(sG + 3.2, 2.6)], v: 1.35 }, { idle: 2 }]);
+shot(6, { zone: 'out', R: 40, caps: [[1.6, 5.8, 'NAGURU VALE ROAD']], g: sc2, cam: (u) => { const A = follow(sc2, u, { dist: 3.0, side: -1.1, h: 1.55, ahead: 4 }); return { ...A, fov: 52, shift: 1 }; } });
+// 3 the gate opens, the guide walks in past the guardhouse (camera leads)
+const sc3 = script(0, [...RA(sG + 3.2, 2.6), -2.2], [{ idle: .9 }, { walk: [RA(sG + 1.0, 1.0), RA(sG - .3, -1.4), [27.0, -1.3], [21.5, -1.5]], v: 1.38 }]);
+shot(7.2, { zone: 'out', R: 40, exp: (u) => 1.0 + .55 * ss(3.2, 5.2, u), caps: [[1.8, 6.0, 'MAIN ENTRANCE']], gate: (u) => ss(.2, 2.4, u), g: sc3, cam: (u) => { const A = lead(sc3, u, { dist: 3.4, side: .8, h: 1.6, lh: 1.45 }); return { ...A, fov: 54, shift: 1 }; } });
+// 4 driveway: landscaped court, parked cars, towards the entrance canopy
+const sc4 = script(0, [21.5, -1.5, -Math.PI / 2], [{ walk: [[16.5, -1.4], [13.0, -.6], [12.2, .9]], v: 1.4 }, { idle: 1 }]);
+shot(6.2, { zone: 'out', R: 35, exp: 1.6, g: sc4, entry: (u) => ss(4.6, 5.7, u), cam: (u) => { const A = follow(sc4, u, { dist: 3.4, side: 1.4, h: 1.7, ahead: 3 }); return { ...A, fov: 56, shift: 1 }; } });
+// 5 lobby: in through the doors, past reception, to the lift; presses the call button; doors open; steps in and turns
+const sc5 = script(0, [12.2, .9, 0], [{ walk: [[12.25, 3.6], [11.4, 5.6], [8.6, 6.7], [6.0, 6.8]], v: 1.45 }]);
+shot(6.6, { zone: 'lobby', R: 26, caps: [[1.2, 5.4, 'LOBBY']], g: sc5, entry: (u) => 1 - ss(3.0, 4.2, u),
+  cam: (u) => { const K = keys([[0, [12.4, 1.6, -1.6], [12.4, 1.5, 6], 58], [3.2, [12.6, 1.6, 2.6], [15.0, 1.3, 8.2], 62], [6.6, [12.5, 1.65, 4.3], [7, 1.4, 6.7], 60]], u); return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+const sc5b = script(0, [2.6, 6.8, -Math.PI / 2], [{ walk: [[.6, 7.1], [-.35, 7.45]], v: 1.3 }, { turn: -Math.PI / 2, d: .45 }, { act: 'Interact', d: 1.1 }, { idle: .7 }, { walk: [[-1.9, 6.8]], v: 1.0 }, { turn: Math.PI / 2, d: .8 }, { idle: .9 }]);
+shot(sc5b.total, { zone: 'lobby', R: 20, g: sc5b, liftG: (u) => Math.min(ss(2.6, 3.4, u), 1 - ss(sc5b.total - .9, sc5b.total - .1, u)),
+  cam: (u) => { const K = keys([[0, [3.6, 1.62, 6.0], [-1.6, 1.35, 7.1], 56], [sc5b.total, [2.6, 1.62, 6.6], [-2.2, 1.35, 6.75], 50]], u); return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+// 6 lift ride: the guide stands facing the doors, indicator counts (cut out at the top)
+shot(3.2, { zone: 'cab', R: 10, ride: true, g: script(0, [-1.9, 6.8, Math.PI / 2], [{ idle: 4 }]),
+  cam: (u) => { const y = rideY(u); return { p: [-1.12, y + 1.62, 5.72 + .04 * u], l: [-2.6, y + 1.2, 7.55], fov: 74, shift: 1 }; } });
+// 7 ONE BEDROOM (Tower B, level 4)
+const sc7 = script(Y4, [3.9, -17.6, 0], [{ walk: [[3.9, -16.0], [4.05, -15.15]], v: 1.38 }, { turn: Math.PI / 2, d: .5 }, { act: 'Interact', d: 1.1 }, { walk: [[6.1, -15.0], [8.4, -14.4]], v: 1.38 }, { turn: Math.PI * .75, d: .7 }, { idle: 1.4 }, { walk: [[10.3, -14.7], [11.75, -14.75]], v: 1.38 }, { turn: Math.PI / 2, d: .5 }, { act: 'Wave', d: 1.3, rate: .9 }, { idle: 1.0 }]);
+shot(sc7.total, { zone: 'u1', R: 16, light: 'u1', caps: [[3.6, 7.0, 'LIVING ROOM', '1 BEDROOM'], [7.2, 9.4, 'KITCHEN', '1 BEDROOM'], [10.6, 13.4, 'BALCONY', '1 BEDROOM']], g: sc7, lift4: (u) => 1 - ss(1.8, 2.6, u), door1: (u) => ss(2.3, 3.2, u),
+  cam: (u) => { const A = follow(sc7, u, { dist: 2.3, side: .5, h: 1.62, ahead: 3 }); const K = keys([[0, [3.9, Y4 + 1.6, -13.2], [3.9, Y4 + 1.4, -18], 60], [3.2, [3.9, Y4 + 1.6, -13.5], [4.6, Y4 + 1.4, -15.2], 62], [4.6, [4.0, Y4 + 1.6, -15.3], [8.0, Y4 + 1.3, -15.3], 62], [5.9, [5.4, Y4 + 1.6, -15.25], [9.5, Y4 + 1.2, -15.0], 66], [8.0, [9.9, Y4 + 1.55, -13.7], [5.4, Y4 + 1.1, -15.8], 66], [9.6, [8.6, Y4 + 1.6, -13.8], [11.5, Y4 + 1.2, -14.9], 62], [12.0, [10.1, Y4 + 1.75, -13.6], [30, Y4 - 5, -12], 60]], u);
+    return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+// 8 TWO BEDROOMS (Tower A, level 6) - lift doors open, cut to the apartment door
+const sc8 = script(Y6, [7.55, 6.7, Math.PI / 2], [{ act: 'Interact', d: 1.1 }, { walk: [[9.4, 6.85], [12.0, 7.6], [14.4, 8.0]], v: 1.38 }, { turn: Math.PI * .95, d: .8 }, { idle: 1.3 }, { walk: [[13.55, 6.9], [13.55, 6.2]], v: 1.38 }, { idle: 1.6 }]);
+shot(2.2, { zone: 'corr6', R: 12, g: script(Y6, [-1.9, 6.7, Math.PI / 2], [{ idle: .5 }, { walk: [[1.5, 6.7]], v: 1.38 }]), lift6: (u) => ss(0, .8, u),
+  cam: (u) => ({ p: [4.2, Y6 + 1.6, 6.7], l: [-1.0, Y6 + 1.35, 6.65], fov: 58, shift: 1 }) });
+shot(sc8.total, { zone: 'u2', R: 18, caps: [[1.6, 4.6, 'LIVING ROOM', '2 BEDROOMS'], [4.8, 7.2, 'KITCHEN', '2 BEDROOMS'], [8.4, 11.0, 'BEDROOM', '2 BEDROOMS']], g: sc8, aptDoor: (u) => ss(.3, 1.3, u), slider: () => 1,
+  cam: (u) => { const K = keys([[0, [11.0, Y6 + 1.55, 7.35], [8.0, Y6 + 1.3, 6.75], 62], [1.2, [10.8, Y6 + 1.55, 7.3], [8.4, Y6 + 1.3, 6.9], 62], [2.4, [9.6, Y6 + 1.55, 6.45], [15.8, Y6 + 1.0, 9.4], 66], [4.4, [10.8, Y6 + 1.5, 6.6], [16.0, Y6 + 1.05, 9.6], 68], [5.6, [14.8, Y6 + 1.5, 7.0], [9.0, Y6 + 1.0, 9.8], 68], [7.6, [15.2, Y6 + 1.5, 7.3], [9.4, Y6 + 1.0, 10.4], 68], [8.8, [14.4, Y6 + 1.6, 7.6], [13.6, Y6 + 1.3, 5.0], 64], [11.6, [13.8, Y6 + 1.6, 7.3], [14.6, Y6 + 1.0, 3.0], 66]], u);
+    return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+// 9 THREE BEDROOMS (Tower A, level 9)
+shot(2.4, { zone: 'corr9', R: 12, light: 'u3', g: script(Y9, [-1.9, 6.7, Math.PI / 2], [{ idle: .5 }, { walk: [[1.8, 6.7], [1.85, 8.0]], v: 1.38 }]), lift9: (u) => ss(0, .8, u),
+  cam: (u) => ({ p: [2.35, Y9 + 1.6, 7.3], l: [-1.0, Y9 + 1.3, 6.65], fov: 62, shift: 1 }) });
+const sc9a = script(Y9, [1.9, 10.2, 0], [{ act: 'Interact', d: 1.0 }, { idle: .5 }, { walk: [[1.9, 11.6], [1.55, 13.4], [1.6, 15.6], [1.35, 16.4]], v: 1.38 }, { turn: -Math.PI * .1, d: .6 }, { idle: 1.8 }]);
+shot(sc9a.total, { zone: 'u3', R: 18, light: 'u3', caps: [[1.6, 4.6, 'KITCHEN', '3 BEDROOMS'], [4.8, 8.6, 'LIVING ROOM', '3 BEDROOMS']], g: sc9a, door3: (u) => ss(.2, 1.2, u),
+  cam: (u) => { const K = keys([[0, [2.0, Y9 + 1.65, 8.4], [1.9, Y9 + 1.3, 13], 60], [1.4, [2.5, Y9 + 1.65, 12.5], [-.6, Y9 + 1.1, 13.0], 66], [3.6, [2.6, Y9 + 1.62, 12.9], [-.2, Y9 + 1.0, 15.5], 68], [5.6, [2.6, Y9 + 1.6, 13.9], [.4, Y9 + 1.0, 18.6], 68], [sc9a.total, [2.6, Y9 + 1.65, 14.4], [-.3, Y9 + 1.1, 18.8], 68]], u);
+    return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+const sc9b = script(Y9, [3.6, 14.15, Math.PI / 2], [{ walk: [[7.0, 14.15], [10.3, 14.1]], v: 1.38 }, { turn: Math.PI, d: .5 }, { idle: .2 }, { walk: [[11.0, 14.1], [12.4, 14.3], [13.4, 15.2]], v: 1.38 }, { turn: Math.PI * .9, d: .6 }, { idle: 2.4 }]);
+shot(sc9b.total, { zone: 'u3', R: 18, light: 'u3', exp: (u) => 1.75 - .5 * ss(6.6, 7.8, u), caps: [[3.6, 6.4, 'CLOAKROOM', '3 BEDROOMS'], [7.4, 10.3, 'MAIN BEDROOM', '3 BEDROOMS']], g: sc9b,
+  cam: (u) => { const K = keys([[0, [1.4, Y9 + 1.6, 14.15], [8, Y9 + 1.3, 14.1], 62], [2.2, [4.3, Y9 + 1.6, 14.2], [9, Y9 + 1.3, 14.1], 62], [4.0, [6.8, Y9 + 1.6, 14.35], [10.2, Y9 + 1.2, 13.0], 64], [5.2, [8.6, Y9 + 1.62, 14.6], [10.6, Y9 + 1.15, 12.0], 66], [6.4, [8.9, Y9 + 1.6, 14.5], [11.5, Y9 + 1.2, 13.6], 66], [7.6, [10.0, Y9 + 1.6, 14.3], [13.4, Y9 + 1.15, 15.0], 66], [8.8, [11.6, Y9 + 1.6, 14.0], [14.0, Y9 + 1.0, 17.2], 68], [sc9b.total, [11.8, Y9 + 1.6, 13.9], [15.4, Y9 + .9, 16.4], 68]], u);
+    return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+shot(2.6, { zone: 'u3', R: 18, light: 'u3', caps: [[.3, 2.4, 'BATHROOM', '3 BEDROOMS']], g: script(Y9, [11.65, 14.5, Math.PI * .8], [{ idle: 3 }]),
+  cam: (u) => { const K = keys([[0, [12.5, Y9 + 1.6, 14.6], [13.4, Y9 + 1.0, 11.2], 68], [2.6, [12.5, Y9 + 1.6, 13.9], [13.9, Y9 + .95, 11.1], 66]], u); return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+const sc9d = script(Y9, [1.3, 17.2, Math.PI], [{ walk: [[.9, 18.4], [.7, 19.5], [.55, 20.05]], v: 1.38 }, { idle: .5 }, { act: 'Wave', d: 1.4, rate: .9 }, { idle: 1.8 }]);
+shot(sc9d.total, { zone: 'u3', R: 30, light: 'u3', slider3: 1, caps: [[1.2, 5.4, 'BALCONY', '3 BEDROOMS']], g: sc9d,
+  cam: (u) => { const K = keys([[0, [1.1, Y9 + 1.6, 16.9], [.7, Y9 + 1.35, 21], 64], [sc9d.total, [1.5, Y9 + 1.65, 18.1], [-3.0, Y9 - 1.0, 32], 60]], u); return { p: K.p, l: K.l, fov: K.fov, shift: .9 }; } });
+// 10 pool deck
+const sc10 = script(0, [19.9, -13.4, .7], [{ walk: [[21.09, -11.38], [23.6, -8.45]], v: 1.25 }, { turn: Math.atan2(-.758, .652), d: .7 }, { idle: 1.4 }]);
+shot(sc10.total, { zone: 'out', R: 30, caps: [[.8, 5.0, 'SWIMMING POOL']], g: sc10, cam: (u) => { const K = keys([[0, [19.1, 1.6, -15.2], [21.5, 1.1, -9.0], 58], [sc10.total, [19.6, 1.62, -14.2], [18.5, 1.0, -3.0], 56]], u); return { p: K.p, l: K.l, fov: K.fov, shift: 1 }; } });
+// 11 roof terrace: out of the lift overrun, past the outdoor kitchen to the pergola and the south parapet
+const sc11 = script(YR + .1, [3.4, 7.4, Math.PI / 2], [{ walk: [[6.0, 9.4], [7.4, 12.6], [7.9, 15.6]], v: 1.38 }, { idle: .5 }, { act: 'Wave', d: 1.4, rate: .9 }, { idle: 1.4 }]);
+shot(sc11.total, { zone: 'out', R: 25, caps: [[.8, 3.8, 'ROOF TERRACE'], [4.0, 6.9, 'ROOFTOP KITCHEN']], g: sc11, cam: (u) => { const A = follow(sc11, u, { dist: 3.0, side: 1.0, h: 1.75, ahead: 4 }); const A2 = follow(sc11, u, { dist: 3.4, side: 1.7, h: 2.25, ahead: 2.2, lh: 1.05 }); const B0 = { p: [8.2, YR + 1.75, 8.6], l: [3.0, YR + 1.3, 7.3] }; const w = ss(1.4, 3.4, u); return { ...mixCam(B0, A2, w), fov: 58, shift: 1 }; } });
+// 12 finale: crane up and out over Naguru, end title
+shot(8.5, { zone: 'out', R: 115, g: script(YR + .1, [7.9, 15.6, 0], [{ idle: 9 }]), final: true,
+  cam: (u) => { const K = keys([[0, [18.8, YR + 3.2, 22.0], [7.6, YR + .6, 14.0], 54, 1], [3.5, [26, YR + 10, 34], [4, YR - 6, 4], 46, .8], [8.5, [104, 30, 96], [2, 36, 2], 33, 1]], u); return K; } });
+window.SC9B = sc9b; const DUR = SH[SH.length - 1].t1; window.DURATION = DUR; window.SHOTS = SH.map(s => [s.t0, s.t1, s.zone]);
+// lift ride helper (shot 6): car rises from G with the doors shut
+function rideY(u) { return 0; }
+// ------------------------------------------------------------------ extras (rigged passers-by): positions per shot zone
+const extrasPose = (t, sh) => { const out = [];
+  const walkL = (pts, v, off, i, y = 0) => { const L = plen(pts), cyc = 2 * L / v, ph = ((t + off) % cyc + cyc) % cyc; const fw = ph < L / v; const s = fw ? ph * v : 2 * L - ph * v; const p = pAt(pts, s); const a = pAt(pts, Math.max(0, s - .4)), b = pAt(pts, Math.min(L, s + .4)); let h = Math.atan2(b[0] - a[0], b[1] - a[1]); if (!fw) h += Math.PI; return { x: p[0], y, z: p[1], heading: h, clips: [['Man_Walk', (t + off) * v / 1.48 * 1.0, 1]] }; };
+  out.push(walkL([RA(sG - 40, 3.2), RA(sG + 40, 3.2)], 1.3, 3, 0));
+  out.push(walkL([RA(sG + 40, 14.8), RA(sG - 30, 14.8)], 1.25, 17, 1));
+  out.push({ x: 29.2, y: 0, z: 2.0, heading: -2.6, clips: [['Man_Idle', t, 1]] });                     // guard by the guardhouse
+  out.push({ x: 15.2, y: 0, z: -2.8, heading: 2.0, clips: [['Man_Idle', t + 1, 1]] }, { x: 14.4, y: 0, z: -3.6, heading: -.9, clips: [['Man_Idle', t + 2.2, 1]] });   // two men chatting by the canopy
+  out.push({ x: 22.0, y: 0, z: -6.0, heading: -2.4, clips: [['Man_Idle', t + .7, 1]] });                // at the pool
+  return out; };
+// ------------------------------------------------------------------ zone visibility, lights, exposure
+const extGroups = [vanta.site.group, vanta.context?.group, vanta.context?.street?.group].filter(Boolean);
+function setZone(z) { const inside = z === 'cab' || z === 'corr6' || z === 'corr9'; const showExt = !inside;
+  extGroups.forEach(g => g.visible = showExt); ENV_SKY.visible = showExt;
+  const LV = { u1: Y4, u2: Y6, u3: Y9, corr6: Y6, corr9: Y9 }[z];
+  vanta.floors.forEach((f, i) => f.group.visible = i > 0 && (z === 'out' ? true : z === 'lobby' ? i <= 3 : LV != null ? (Math.abs(f.level - LV) < 3.4 || (showExt && i === 1)) : (Math.abs(f.level - Y6) < .1 || i === 1)));
+  const G = INT.groups; G.lobby.visible = z === 'lobby' || z === 'out'; G.cab.visible = true; G.corridor.visible = z === 'corr6' || z === 'u2'; G.apt.visible = z === 'u2' || z === 'corr6' || z === 'out'; G.balcony.visible = z === 'u2' || z === 'out';
+  UN.unit1.visible = z === 'u1'; UN.unit3.visible = z === 'u3' || z === 'corr9'; }
+const exposure = (z, S, u) => S && S.exp ? (typeof S.exp === 'function' ? S.exp(u) : S.exp) : z === 'out' ? 1.0 : z === 'lobby' ? 1.14 : z === 'cab' || z.startsWith('corr') ? 1.12 : 1.2;
+// ------------------------------------------------------------------ 2D overlay (titles + location captions only)
+const fontReady = document.fonts ? Promise.all(['300 40px Inter', '500 40px Inter', '600 40px Inter', '400 40px Caladea'].map(f => document.fonts.load(f))) : Promise.resolve();
+const grain = document.createElement('canvas'); grain.width = grain.height = 256; { const g = grain.getContext('2d'), id = g.createImageData(256, 256); let s = 12345; for (let i = 0; i < id.data.length; i += 4) { s = (s * 1664525 + 1013904223) >>> 0; const v = (s >>> 24); id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; } g.putImageData(id, 0, 0); }
+function spaced(txt, x, y, ls) { g2.letterSpacing = ls + 'px'; g2.fillText(txt, x + ls / 2, y); g2.letterSpacing = '0px'; }
+function overlay(t, S, u) {
+  g2.clearRect(0, 0, W, H);
+  const vg = g2.createRadialGradient(W / 2, H * .48, H * .28, W / 2, H * .5, H * .78); vg.addColorStop(0, 'rgba(16,16,18,0)'); vg.addColorStop(1, 'rgba(16,16,18,.28)'); g2.fillStyle = vg; g2.fillRect(0, 0, W, H);
+  g2.globalAlpha = .03; const f = Math.floor(t * 30), ox = (f * 97) % 256, oy = (f * 61) % 256; g2.save(); g2.translate(-ox, -oy); g2.fillStyle = g2.createPattern(grain, 'repeat'); g2.fillRect(0, 0, W + 256, H + 256); g2.restore(); g2.globalAlpha = 1;
+  g2.textAlign = 'center'; g2.textBaseline = 'alphabetic';
+  { const a = ss(.7, 1.9, t) * (1 - ss(4.4, 5.6, t)); if (a > 0) { const y = H * .43; const bg = g2.createLinearGradient(0, y - 260 * U, 0, y + 360 * U); bg.addColorStop(0, 'rgba(16,16,18,0)'); bg.addColorStop(.5, `rgba(16,16,18,${.36 * a})`); bg.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = bg; g2.fillRect(0, y - 260 * U, W, 620 * U); g2.globalAlpha = a;
+      g2.shadowColor = 'rgba(0,0,0,.35)'; g2.shadowBlur = 24 * U; g2.fillStyle = V.IVORY; g2.font = `300 ${76 * U}px Inter`; spaced('Step inside', W / 2, y, 2 * U); g2.font = `400 ${92 * U}px Caladea, "Liberation Serif", serif`; g2.fillText('Vanta House.', W / 2, y + 104 * U);
+      g2.shadowBlur = 0; g2.fillStyle = V.GOLD_HI; g2.fillRect(W / 2 - 46 * U * a, y + 146 * U, 92 * U * a, 3 * U); g2.globalAlpha = 1; } }
+  for (const [a0, a1, txt, kick] of (S.caps || [])) { const fi = Math.min(.6, (a1 - a0) / 3); const a = ss(a0, a0 + fi, u) * (1 - ss(a1 - fi, a1, u)); if (a <= 0) continue; const y = 340 * U, dy = (1 - a) * 14 * U;
+    { const bg = g2.createLinearGradient(0, y - 120 * U, 0, y + 70 * U); bg.addColorStop(0, 'rgba(16,16,18,0)'); bg.addColorStop(.55, `rgba(16,16,18,${.26 * a})`); bg.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = bg; g2.fillRect(0, y - 120 * U, W, 190 * U); }
+    if (kick) { g2.globalAlpha = a * .95; g2.shadowColor = 'rgba(0,0,0,.45)'; g2.shadowBlur = 12 * U; g2.fillStyle = V.GOLD_HI; g2.font = `500 ${21 * U}px Inter`; spaced(kick, W / 2, y - 52 * U + dy, 7 * U); g2.shadowBlur = 0; }
+    g2.globalAlpha = a; g2.shadowColor = 'rgba(0,0,0,.45)'; g2.shadowBlur = 18 * U; g2.fillStyle = V.IVORY; g2.font = `500 ${34 * U}px Inter`; spaced(txt, W / 2, y + dy, 9 * U); g2.shadowBlur = 0; const rw = (60 + 40 * a) * U; g2.fillStyle = V.GOLD_HI; g2.fillRect(W / 2 - rw / 2, y + 26 * U + dy, rw, 2.5 * U); g2.globalAlpha = 1; }
+  if (S.ride) { const a = ss(.1, .5, u) * (1 - ss(2.6, 3.1, u)); const n = Math.min(9, Math.floor(ss(.3, 2.8, u) * 4.999)); const lab = ['G', '1', '2', '3', '4'][n]; if (a > 0) { const y = 1150 * U; g2.globalAlpha = a; g2.shadowColor = 'rgba(0,0,0,.5)'; g2.shadowBlur = 20 * U; g2.fillStyle = V.IVORY; g2.font = `500 ${24 * U}px Inter`; spaced('GOING UP', W / 2, y - 100 * U, 8 * U); g2.font = `300 ${120 * U}px Inter`; g2.fillText(lab, W / 2, y + 20 * U); g2.shadowBlur = 0; g2.globalAlpha = 1; } }
+  if (S.final) { const a = ss(4.0, 5.4, u); if (a > 0) { const y = H * .255; const bg = g2.createLinearGradient(0, y - 300 * U, 0, y + 420 * U); bg.addColorStop(0, 'rgba(16,16,18,0)'); bg.addColorStop(.45, `rgba(16,16,18,${.42 * a})`); bg.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = bg; g2.fillRect(0, y - 300 * U, W, 720 * U);
+      g2.globalAlpha = a; g2.fillStyle = V.IVORY; g2.font = `400 ${104 * U}px Caladea, "Liberation Serif", serif`; spaced('VANTA HOUSE', W / 2, y + 40 * U, 14 * U); const rw = 120 * U * ss(4.6, 5.8, u); g2.fillStyle = V.GOLD_HI; g2.fillRect(W / 2 - rw / 2, y + 84 * U, rw, 3 * U);
+      g2.globalAlpha = ss(4.8, 5.8, u); g2.fillStyle = V.GOLD_HI; g2.font = `500 ${32 * U}px Inter`; spaced('NAGURU, KAMPALA', W / 2, y + 150 * U, 10 * U); g2.globalAlpha = ss(5.3, 6.2, u) * .85; g2.fillStyle = V.IVORY; g2.font = `400 ${24 * U}px Inter`; spaced('Blackstone Real Estate', W / 2, y + 214 * U, 3 * U); g2.globalAlpha = 1; } }
+}
+// ------------------------------------------------------------------ render
+const tv = new THREE.Vector3(), fv = new THREE.Vector3(), lookV = new THREE.Vector3(); let lastZone = '';
+window.renderAt = async (t) => {
+  t = Math.max(0, Math.min(DUR - 1e-4, t)); const S = SH.find(s => t < s.t1) || SH[SH.length - 1], u = t - S.t0;
+  vanta.update(t);
+  // doors / lifts
+  vanta.site.gate.userData.setOpen(S.gate ? S.gate(u) : (S.t0 > 12 ? 1 : 0));
+  const arr = S.lift4 ? [S.lift4(u), Y4] : S.lift6 ? [S.lift6(u), Y6] : S.lift9 ? [S.lift9(u), Y9] : null;
+  INT.set({ t, entry: S.entry ? S.entry(u) : 0, liftG: S.liftG ? S.liftG(u) : 0, carDoor: arr ? arr[0] : S.liftG ? S.liftG(u) : 0, lift6: S.lift6 ? S.lift6(u) : 0, cabY: arr ? arr[1] : 0, floor: S.ride ? ['G', '1', '2', '3', '4'][Math.min(4, Math.floor(ss(.3, 2.8, u) * 4.999))] : 'G', dir: S.ride ? 1 : 0, aptDoor: S.aptDoor ? S.aptDoor(u) : 0, slider: S.slider ? S.slider(u) : 1 });
+  UN.doors4.set(S.lift4 ? S.lift4(u) : 0, '4', 0); UN.doors9.set(S.lift9 ? S.lift9(u) : 0, '9', 0); UN.door1(S.door1 ? S.door1(u) : 0); UN.door3(S.door3 ? S.door3(u) : (S.zone === 'u3' ? 1 : 0));
+  if (S.zone !== lastZone) { setZone(S.zone); lastZone = S.zone; } if (window.__after) window.__after(t);
+  I.useLights(S.light === 'u1' || S.zone === 'u1' ? UN.lights1 : (S.light === 'u3' || S.zone === 'u3') ? UN.lights3 : INT.baseLights);
+  // characters
+  const gp = S.g ? S.g.at(u) : null; guide.group.visible = !!gp; if (gp) guide.set(gp);
+  const ex = extrasPose(t, S); extras.forEach((e, i) => { const p = ex[i]; e.group.visible = !!p && S.zone === 'out'; if (p && S.zone === 'out') e.set(p); });
+  // camera
+  const C = S.cam(u); cam.position.set(...C.p); lookV.set(...C.l); const shift = C.shift ?? 1;
+  const d = lookV.clone().sub(cam.position), hz = Math.hypot(d.x, d.z), pitch = Math.atan2(d.y, hz), keep = pitch * (1 - shift), rest = pitch - keep;
+  tv.set(cam.position.x + d.x, cam.position.y + Math.tan(keep) * hz, cam.position.z + d.z); cam.lookAt(tv);
+  cam.fov = C.fov || 55; cam.updateProjectionMatrix(); cam.projectionMatrix.elements[9] = cam.projectionMatrix.elements[5] * Math.tan(rest) / Math.cos(keep); cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert(); cam.updateMatrixWorld();
+  const want = S.zone === 'out' ? 2048 : 1024, sh = LT.key.shadow; if (sh.mapSize.x !== want) { sh.mapSize.set(want, want); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+  fv.copy(cam.position).lerp(lookV, .4); if (S.R > 100) fv.set(0, 10, 0); V.focusShadow(LT, fv, S.R || 30);
+  const gw = ss(DUR - 12, DUR - 4, t); LT.key.color.set('#ffdcb4').lerp(new THREE.Color('#ffc58a'), gw * .5); ENV_SKY.material.uniforms.uWarm.value = gw * .6;
+  renderer.toneMappingExposure = exposure(S.zone, S, u);
+  if (!window.NO_GL) renderer.render(scene, cam);
+  if (!window.NO_UI) overlay(t, S, u); return true;
+};
+window.view = (o) => { window.__view = o; };
+await fontReady; window.ready = true;
+</script></body></html>

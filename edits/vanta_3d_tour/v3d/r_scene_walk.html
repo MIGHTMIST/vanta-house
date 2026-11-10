@@ -1,0 +1,190 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>html,body{margin:0;background:#101012;overflow:hidden}#stage{position:relative;width:100vw;height:100vh}#stage canvas{position:absolute;left:0;top:0;width:100%;height:100%}</style></head>
+<body><div id="stage"><canvas id="gl"></canvas><canvas id="ui"></canvas></div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+// Vanta House walkthrough film: one continuous camera journey, 1080x1920 @30fps, renderAt(t) is a pure function of t.
+import * as THREE from 'three';
+import * as V from './r_vanta3d.js';
+import * as I from './r_interior.js';
+import { loadPano, panoDome } from './r_pano.js';
+const { w: W, h: H } = V.viewportSize(); const U = W / 1080;
+const gl = document.getElementById('gl'), ui = document.getElementById('ui'); ui.width = W; ui.height = H; const g2 = ui.getContext('2d');
+const renderer = V.makeRenderer(THREE, gl); window.__R = renderer;
+const scene = new THREE.Scene(); window.__scene = scene;
+const vanta = V.buildVanta(THREE, { people: 'film' }); scene.add(vanta.group); vanta.floors[0].group.visible = false; window.__v = vanta;
+const INT = I.buildInteriors(THREE, vanta); scene.add(INT.group); window.__I = INT;
+V.makeSky(THREE, scene, 'day'); const LT = V.lighting(THREE, scene, 'day', { renderer, materials: vanta.materials });
+const cam = new THREE.PerspectiveCamera(50, W / H, 0.08, 7000);
+const Y6 = I.ROOMS.living[2], GOLD = V.GOLD, GOLD_HI = V.GOLD_HI, IVORY = V.IVORY, INK = V.INK;
+// ------------------------------------------------------------------ timeline
+const DUR = 75; window.DURATION = DUR;
+const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const sGate = vanta.dims.sGate, rd = vanta.dims.road, RA = (s, off, y) => { const p = rd.at(s, off); return [p[0], y, p[1]]; };
+// keys: [t, pos, look, fov, shift(0..1: keep verticals), fixY]
+const K = [
+  [0.0, [150, 92, -128], [3, 16, 0], 30, 0],
+  [3.2, [126, 74, -96], [4, 15, 1], 30, 0],
+  [6.0, [90, 44, -50], [9, 13, 2], 34, .2],
+  [7.4, RA(sGate + 30, 11, 27), [9, 12, 2], 40, .4],
+  [8.9, RA(sGate + 16, 10.5, 9), [12, 10, 3], 48, .75],
+  [10.8, RA(sGate + 7, 13.4, 1.65), [10, 11, 4], 54, 1, 1],
+  [12.6, RA(sGate + 3, 8.4, 1.65), [12, 5, 2], 54, 1, 1],
+  [14.2, [31.6, 1.65, -0.6], [12, 2.6, .8], 56, 1, 1],
+  [16.4, [22.5, 1.65, -0.9], [12.2, 2.2, 1.6], 56, 1, 1],
+  [18.2, [14.8, 1.65, -1.0], [11.9, 1.6, 4.5], 58, 1, 1],
+  [19.4, [12.05, 1.62, 1.0], [12.4, 1.5, 7], 62, 1, 1],
+  [21.0, [12.2, 1.6, 3.9], [12.7, 1.35, 10], 64, 1, 1],
+  [22.6, [12.0, 1.6, 4.7], [16.6, 1.25, 4.4], 64, 1, 1],
+  [24.2, [11.2, 1.6, 5.8], [14.8, 1.4, 9.6], 64, 1, 1],
+  [25.6, [8.6, 1.6, 6.8], [2, 1.5, 6.75], 62, 1, 1],
+  [27.4, [3.0, 1.6, 6.72], [-2, 1.45, 6.65], 60, 1, 1],
+  [28.7, [-0.7, 1.6, 6.66], [-3.5, 1.4, 6.6], 62, 1, 1],
+  [29.6, [-2.05, 1.6, 6.62], [-2.7, 1.45, 5.6], 66, 1, 1],
+  [30.6, [-2.2, 1.55, 6.65], [1, 1.5, 6.65], 72, 1, 1],
+  [34.6, [-2.0, Y6 + 1.55, 6.66], [6, Y6 + 1.45, 6.7], 64, 1, 1],
+  [36.2, [3.6, Y6 + 1.6, 6.7], [8.1, Y6 + 1.3, 6.68], 60, 1, 1],
+  [37.4, [7.4, Y6 + 1.55, 6.7], [12, Y6 + 1.3, 7.2], 58, 1, 1],
+  [52.6, [17.6, Y6 + 1.6, 8.6], [40, 16, 2], 58, 1, 1],
+  [54.0, [18.5, Y6 + 1.75, 7.2], [24, 7, -14], 60, .6, 1],
+  [55.6, [18.45, Y6 + 1.8, 7.6], [70, 18, -22], 58, 1, 1],
+  [57.2, [23, Y6 + 4.5, 12], [9, 19, 3], 50, .8],
+  [59.0, [40, 27, 10], [9, 16, -2], 46, .8],
+  [60.8, [19.5, 12, -15], [12, 3, -5], 54, .6],
+  [61.8, [21.5, 5.0, -11.5], [8, 3, -11], 56, .9],
+  [62.7, [24.0, 1.62, -8.75], [6, 4.5, -11], 60, 1, 1],
+  [64.6, [23.3, 1.62, -9.6], [5, 5.5, -7], 60, 1, 1],
+  [65.9, [26.5, 3.2, -2.5], [16, 9, 6], 56, 1],
+  [67.8, [31, 22, 3], [16, 27, 6], 52, 1],
+  [69.6, [26, 45.4, -6], [15, 42.4, 8], 52, 1],
+  [71.3, [25, 47.5, 21], [8, 41.5, 12], 56, .7],
+  [74.0, [104, 30, 96], [2, 36, 2], 33, 1],
+  [75.0, [108, 31, 100], [2, 36, 2], 33, 1],
+];
+// time-parameterised cubic Hermite (C1 in time): tangents from neighbours over their time span; fixY keys get zero vertical tangent
+function interp(t, idx) {
+  let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
+  const k0 = K[Math.max(0, i - 1)], k1 = K[i], k2 = K[i + 1], k3 = K[Math.min(K.length - 1, i + 2)];
+  const t1 = k1[0], t2 = k2[0], dt = t2 - t1, u = Math.max(0, Math.min(1, (t - t1) / dt));
+  const v1 = k1[idx], v2 = k2[idx]; const tan = (ka, kb, kc, j) => (kc[idx][j] - ka[idx][j]) / Math.max(1e-3, kc[0] - ka[0]);
+  const out = [];
+  for (let j = 0; j < v1.length; j++) { let m1 = tan(k0, k1, k2, j) * dt, m2 = tan(k1, k2, k3, j) * dt; if (j === 1 && idx === 1) { if (k1[5]) m1 = 0; if (k2[5]) m2 = 0; }
+    if (i === 0) m1 = (v2[j] - v1[j]); if (i + 1 === K.length - 1) m2 = (v2[j] - v1[j]);
+    const u2 = u * u, u3 = u2 * u; out.push((2 * u3 - 3 * u2 + 1) * v1[j] + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * v2[j] + (u3 - u2) * m2); }
+  return out;
+}
+const scal = (t, idx) => { let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++; const u = ss(K[i][0], K[i + 1][0], t); return K[i][idx] + (K[i + 1][idx] - K[i][idx]) * u; };
+// lift: car height and display
+const LIFT_T0 = 31.3, LIFT_T1 = 33.7;
+const cabY = (t) => Y6 * ease(Math.max(0, Math.min(1, (t - LIFT_T0) / (LIFT_T1 - LIFT_T0))));
+const floorAt = (t) => { const y = cabY(t); const n = y < 2 ? 0 : Math.min(6, Math.round((y - 4) / 3.3) + 1); return n === 0 ? 'G' : String(n); };
+function doors(t) {
+  const liftOpenG = Math.min(ss(26.5, 27.6, t), 1 - ss(30.3, 31.2, t)), liftOpen6 = ss(33.85, 34.7, t);
+  return { t, entry: Math.min(ss(17.5, 18.6, t), 1 - ss(21.2, 22.4, t)), liftG: liftOpenG, lift6: liftOpen6, carDoor: t < 32 ? liftOpenG : liftOpen6, cabY: cabY(t), floor: floorAt(t), dir: t > LIFT_T0 - .2 && t < LIFT_T1 + .2 ? 1 : 0,
+    aptDoor: ss(35.9, 37.2, t), slider: ss(49.4, 50.7, t) };
+}
+window.__cam = (t) => { const p = interp(t, 1); if (t >= 30.6 && t <= 34.6) p[1] = cabY(t) + 1.55; return p; };
+const lookAt = (t) => { const l = interp(t, 2); if (t >= 30.6 && t <= 34.6) l[1] = cabY(t) + 1.55; return l; };
+// ------------------------------------------------------------------ Vanta's own 360 interior renders (artist's impressions), rotation + FOV only
+const PANOS = { corr3: ['vanta_vr_3bhk_9_corridor.jpg', 1536], liv3: ['vanta_vr_3bhk_1_living.jpg', 2048], bed3: ['vanta_vr_3bhk_5_bedroom1.jpg', 1536], bath3: ['vanta_vr_3bhk_2_bath1.jpg', 1536], liv2: ['vanta_vr_2bhk_1_living.jpg', 1536], liv1: ['vanta_vr_1bhk_1_living.jpg', 1536] };
+const PSEG = [
+  [37.2, 39.4, 'corr3', 193, 172, -3, -2, 62, 56],
+  [39.3, 45.4, 'liv3', 18, -172, -4, -6, 62, 60],
+  [45.3, 48.0, 'bed3', 188, 118, -17, -7, 62, 56],
+  [47.9, 49.6, 'bath3', 163, 142, -24, -16, 62, 58],
+  [49.5, 50.8, 'liv2', -6, -28, -4, -4, 60, 56],
+  [50.7, 51.95, 'liv1', 196, 166, -5, -4, 60, 56],
+  [51.85, 52.85, 'liv3', 4, -6, -2, -1, 52, 36],
+];
+const PFADE = .24;   // cross-dissolve between panoramas (and to/from the modelled scenes)
+const panoScene = new THREE.Scene(), dome = panoDome(THREE); panoScene.add(dome); const PT = {};
+await Promise.all(Object.entries(PANOS).map(async ([k, [f, sz]]) => { PT[k] = await loadPano(THREE, './r_pano_src/' + f, Math.min(sz, +(new URLSearchParams(location.search).get('pano') || 4096))); }));
+function panoState(t) { // -> {alpha (over 3D), a: {id,yaw,pitch,fov}, b, mix}
+  const segs = PSEG.filter(s => t >= s[0] - PFADE && t <= s[1] + PFADE); if (!segs.length) return null;
+  const at = (s) => { const u = ease(Math.max(0, Math.min(1, (t - s[0]) / (s[1] - s[0])))); return { id: s[2], yaw: s[3] + (s[4] - s[3]) * u, pitch: s[5] + (s[6] - s[5]) * u, fov: s[7] + (s[8] - s[7]) * u }; };
+  const first = PSEG[0][0], last = PSEG[PSEG.length - 1][1]; const alpha = ss(first - .05, first + PFADE, t) * (1 - ss(last - PFADE, last + .05, t));
+  const cur = PSEG.filter(s => t >= s[0] && t <= s[1]); const A = at(cur[0] || segs[0]); let B = null, mix = 0;
+  if (cur.length > 1) { B = at(cur[1]); mix = ss(cur[1][0], cur[0][1], t); }
+  return { alpha, A, B, mix };
+}
+const panoCam = new THREE.PerspectiveCamera(60, W / H, .1, 100); panoCam.rotation.order = 'YXZ';
+// ------------------------------------------------------------------ zone visibility + light/shadow/exposure per time
+const zone = (t) => t < 17.6 ? 'out' : t < 29.4 ? 'lobby' : t < 34.4 ? 'cab' : t < 37.6 ? 'corr' : t < 52.5 ? 'pano' : 'out';
+const shadowR = (t) => { const z = zone(t); return z === 'out' ? (t < 8 || t > 72 ? 115 : t < 16 ? 50 : t > 56.5 && t < 61 ? 70 : 40) : z === 'lobby' ? 26 : z === 'cab' || z === 'corr' ? 12 : 30; };
+const exposure = (t) => 1.0 + .16 * ss(17.6, 19.4, t) * (1 - ss(28.6, 29.6, t)) + .12 * ss(33.6, 34.6, t) * (1 - ss(37.0, 38.0, t)) + .06 * ss(52.0, 52.8, t) * (1 - ss(54.0, 56.0, t)) - .06 * ss(70, 74, t);
+const extGroups = [vanta.site.group, vanta.context?.group, vanta.context?.street?.group].filter(Boolean);
+function setZone(t) { const z = zone(t); const showExt = !(z === 'cab' && t > 31.15 && t < 33.9) && z !== 'corr' && !(z === 'pano' && t > 37.6 && t < 52.4);
+  extGroups.forEach(g => g.visible = showExt); vanta.floors.forEach((f, i) => f.group.visible = i > 0 && (showExt || f.level === Y6 || f.index === 1));
+  ENV_SKY.visible = showExt; INT.groups.apt.visible = t > 52 || (t > 35.5 && t < 37.9); INT.groups.corridor.visible = t > 33 && t < 37.8; INT.groups.lobby.visible = (t > 13.5 && t < 34) || (z === 'out' && t > 56); INT.groups.cab.visible = t > 24 && t < 36; }
+const ENV_SKY = scene.getObjectByName('sky');
+// golden-hour drift for the last shot
+const key0 = LT.key.color.clone(), keyI0 = LT.key.intensity;
+function grade(t) { const g = ss(66, 74, t); LT.key.color.copy(key0).lerp(new THREE.Color('#ffc58a'), g * .55); LT.key.intensity = keyI0 * (1 - .12 * g); ENV_SKY.material.uniforms.uWarm.value = g * .7; }
+// ------------------------------------------------------------------ 2D overlay
+const fontReady = document.fonts ? Promise.all(['300 40px Inter', '500 40px Inter', '600 40px Inter', '400 40px Caladea'].map(f => document.fonts.load(f))) : Promise.resolve();
+const CAPS = [[8.0, 11.0, 'NAGURU VALE ROAD'], [12.6, 15.6, 'MAIN ENTRANCE'], [20.0, 23.6, 'LOBBY'], [39.6, 42.3, 'LIVING ROOM', '3 BEDROOMS'], [42.7, 45.1, 'KITCHEN', '3 BEDROOMS'], [45.6, 47.9, 'BEDROOM', '3 BEDROOMS'], [48.1, 49.5, 'BATHROOM', '3 BEDROOMS'], [49.7, 50.75, '2 BEDROOMS', 'HOME TYPES'], [50.85, 51.9, '1 BEDROOM', 'HOME TYPES'], [53.0, 56.0, 'BALCONY'], [62.1, 65.0, 'SWIMMING POOL'], [68.5, 71.3, 'ROOFTOP']];
+const NOTE = ['3D illustration from the approved drawings.', 'Interiors and finishes are indicative, not the final appearance.'];
+const grain = document.createElement('canvas'); grain.width = grain.height = 256; { const g = grain.getContext('2d'), id = g.createImageData(256, 256); let s = 12345; for (let i = 0; i < id.data.length; i += 4) { s = (s * 1664525 + 1013904223) >>> 0; const v = (s >>> 24); id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; } g.putImageData(id, 0, 0); }
+function spaced(txt, x, y, ls) { g2.letterSpacing = ls + 'px'; g2.fillText(txt, x + ls / 2, y); g2.letterSpacing = '0px'; }
+function overlay(t) {
+  g2.clearRect(0, 0, W, H);
+  // vignette + film grain (very light)
+  const vg = g2.createRadialGradient(W / 2, H * .48, H * .28, W / 2, H * .5, H * .78); vg.addColorStop(0, 'rgba(16,16,18,0)'); vg.addColorStop(1, 'rgba(16,16,18,.30)'); g2.fillStyle = vg; g2.fillRect(0, 0, W, H);
+  g2.globalAlpha = .035; const f = Math.floor(t * 30), ox = (f * 97) % 256, oy = (f * 61) % 256; g2.save(); g2.translate(-ox, -oy); const pat = g2.createPattern(grain, 'repeat'); g2.fillStyle = pat; g2.fillRect(0, 0, W + 256, H + 256); g2.restore(); g2.globalAlpha = 1;
+  g2.textAlign = 'center'; g2.textBaseline = 'alphabetic';
+  // opening title
+  { const a = ss(.7, 1.9, t) * (1 - ss(4.6, 5.6, t)); if (a > 0) { const y = H * .43; const bg = g2.createLinearGradient(0, y - 260 * U, 0, y + 360 * U); bg.addColorStop(0, 'rgba(16,16,18,0)'); bg.addColorStop(.5, `rgba(16,16,18,${.36 * a})`); bg.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = bg; g2.fillRect(0, y - 260 * U, W, 620 * U); g2.globalAlpha = a; g2.shadowColor = 'rgba(0,0,0,.35)'; g2.shadowBlur = 24 * U;
+      g2.fillStyle = IVORY; g2.font = `300 ${76 * U}px Inter`; spaced('Step inside', W / 2, y, 2 * U); g2.font = `400 ${92 * U}px Caladea, "Liberation Serif", serif`; g2.fillText('Vanta House.', W / 2, y + 104 * U);
+      g2.shadowBlur = 0; g2.fillStyle = GOLD_HI; g2.fillRect(W / 2 - 46 * U * a, y + 146 * U, 92 * U * a, 3 * U); g2.globalAlpha = 1; } }
+  // location captions: small letter-spaced caps + gold rule, ease in/out
+  for (const [a0, a1, txt, kick] of CAPS) { const fi = Math.min(.7, (a1 - a0) / 3); const a = ss(a0, a0 + fi, t) * (1 - ss(a1 - fi, a1, t)); if (a <= 0) continue; const y = 340 * U, dy = (1 - a) * 14 * U;
+    { const bg = g2.createLinearGradient(0, y - 120 * U, 0, y + 70 * U); bg.addColorStop(0, 'rgba(16,16,18,0)'); bg.addColorStop(.55, `rgba(16,16,18,${.26 * a})`); bg.addColorStop(1, 'rgba(16,16,18,0)'); g2.globalAlpha = 1; g2.fillStyle = bg; g2.fillRect(0, y - 120 * U, W, 190 * U); }
+    if (kick) { g2.globalAlpha = a * .9; g2.shadowColor = 'rgba(0,0,0,.45)'; g2.shadowBlur = 12 * U; g2.fillStyle = GOLD_HI; g2.font = `500 ${20 * U}px Inter`; spaced(kick, W / 2, y - 52 * U + dy, 7 * U); g2.shadowBlur = 0; }
+    g2.globalAlpha = a; g2.shadowColor = 'rgba(0,0,0,.45)'; g2.shadowBlur = 18 * U; g2.fillStyle = IVORY; g2.font = `500 ${34 * U}px Inter`; spaced(txt, W / 2, y + dy, 9 * U);
+    g2.shadowBlur = 0; const rw = (60 + 40 * a) * U; g2.fillStyle = GOLD_HI; g2.fillRect(W / 2 - rw / 2, y + 26 * U + dy, rw, 2.5 * U); g2.globalAlpha = 1; }
+  // lift: floor counter
+  { const a = ss(30.9, 31.4, t) * (1 - ss(33.9, 34.5, t)); if (a > 0) { const y = 820 * U; g2.globalAlpha = a; g2.shadowColor = 'rgba(0,0,0,.5)'; g2.shadowBlur = 20 * U;
+      g2.fillStyle = IVORY; g2.font = `500 ${26 * U}px Inter`; spaced('GOING UP', W / 2, y - 120 * U, 8 * U); g2.font = `300 ${150 * U}px Inter`; g2.fillText(floorAt(t), W / 2, y + 40 * U);
+      g2.shadowBlur = 0; g2.fillStyle = GOLD_HI; const p = Math.max(0, Math.min(1, (t - LIFT_T0) / (LIFT_T1 - LIFT_T0))); g2.fillRect(W / 2 - 90 * U, y + 90 * U, 180 * U, 2 * U); g2.fillStyle = IVORY; g2.globalAlpha = a * .9; g2.fillRect(W / 2 - 90 * U, y + 90 * U, 180 * U * p, 2 * U);
+      g2.globalAlpha = a * .7; g2.font = `500 ${22 * U}px Inter`; spaced('LEVEL 6', W / 2, y + 140 * U, 6 * U); g2.globalAlpha = 1; } }
+  // end title
+  { const a = ss(71.6, 73.0, t); if (a > 0) { const y = H * .255; const bg = g2.createLinearGradient(0, y - 300 * U, 0, y + 420 * U); bg.addColorStop(0, 'rgba(16,16,18,0)'); bg.addColorStop(.45, `rgba(16,16,18,${.42 * a})`); bg.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = bg; g2.fillRect(0, y - 300 * U, W, 720 * U);
+      g2.globalAlpha = a; g2.fillStyle = IVORY; g2.font = `400 ${104 * U}px Caladea, "Liberation Serif", serif`; spaced('VANTA HOUSE', W / 2, y + 40 * U, 14 * U);
+      const rw = 120 * U * ss(72.2, 73.4, t); g2.fillStyle = GOLD_HI; g2.fillRect(W / 2 - rw / 2, y + 84 * U, rw, 3 * U);
+      g2.globalAlpha = ss(72.4, 73.4, t); g2.fillStyle = GOLD_HI; g2.font = `500 ${32 * U}px Inter`; spaced('NAGURU, KAMPALA', W / 2, y + 150 * U, 10 * U);
+      g2.globalAlpha = ss(72.9, 73.8, t) * .85; g2.fillStyle = IVORY; g2.font = `400 ${24 * U}px Inter`; spaced('Blackstone Real Estate', W / 2, y + 214 * U, 3 * U); g2.globalAlpha = 1; } }
+  if (window.__panoOn) { g2.globalAlpha = .75; g2.textAlign = 'right'; g2.fillStyle = IVORY; g2.shadowColor = 'rgba(0,0,0,.5)'; g2.shadowBlur = 6 * U; g2.font = `500 ${20 * U}px Inter`; spaced("ARTIST'S IMPRESSION", W - 64 * U, 1408 * U, 3 * U); g2.shadowBlur = 0; g2.globalAlpha = 1; g2.textAlign = 'center'; }
+  // permanent note (bottom-left, 60%)
+  g2.globalAlpha = .6; g2.textAlign = 'left'; g2.fillStyle = IVORY; g2.shadowColor = 'rgba(0,0,0,.5)'; g2.shadowBlur = 6 * U; g2.font = `400 ${21 * U}px Inter`;
+  g2.fillText(NOTE[0], 60 * U, 1408 * U); g2.fillText(NOTE[1], 60 * U, 1438 * U); g2.shadowBlur = 0; g2.globalAlpha = 1;
+}
+// ------------------------------------------------------------------ render
+const tv = new THREE.Vector3(), fv = new THREE.Vector3(), lookV = new THREE.Vector3();
+window.renderAt = async (t) => {
+  t = Math.max(0, Math.min(DUR - 1e-4, t));
+  vanta.update(t); vanta.site.gate.userData.setOpen(ss(10.6, 13.0, t)); INT.set(doors(t)); setZone(t); grade(t); if (window.__after) window.__after(t);
+  const p = window.__cam(t), l = lookAt(t), fov = scal(t, 3), shift = scal(t, 4);
+  cam.position.set(p[0], p[1], p[2]); lookV.set(l[0], l[1], l[2]);
+  // lens shift: pitch only by (1-shift); remaining elevation is taken by an off-axis projection (verticals stay parallel)
+  const d = lookV.clone().sub(cam.position), hz = Math.hypot(d.x, d.z), pitch = Math.atan2(d.y, hz), keep = pitch * (1 - shift), rest = pitch - keep;
+  tv.set(cam.position.x + d.x, cam.position.y + Math.tan(keep) * hz, cam.position.z + d.z); cam.lookAt(tv);
+  cam.fov = fov; cam.updateProjectionMatrix(); cam.projectionMatrix.elements[9] = cam.projectionMatrix.elements[5] * Math.tan(rest) / Math.cos(keep) * 1.0; cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert(); cam.updateMatrixWorld();
+  // shadows follow what the camera sees
+  const want = zone(t) === 'out' ? 2048 : 1024, sh = LT.key.shadow; if (sh.mapSize.x !== want) { sh.mapSize.set(want, want); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+  const R = shadowR(t); fv.copy(cam.position).lerp(lookV, zone(t) === 'out' ? .5 : .35); if (zone(t) === 'out' && R > 100) fv.set(0, 10, 0); V.focusShadow(LT, fv, R);
+  renderer.toneMappingExposure = exposure(t);
+  const PS = panoState(t);
+  if (!window.NO_GL) {
+    if (!PS || PS.alpha < 1) renderer.render(scene, cam);
+    if (PS && PS.alpha > 0) { const u = dome.material.uniforms; u.uCube.value = PT[PS.A.id]; u.uYaw.value = 0; u.uMix.value = PS.B ? PS.mix : 0; if (PS.B) u.uCube2.value = PT[PS.B.id];
+      const o = PS.B && PS.mix > .5 ? PS.B : PS.A; const yawA = PS.A.yaw, yawB = PS.B ? PS.B.yaw : yawA;
+      panoCam.rotation.set(PS.A.pitch * Math.PI / 180, yawA * Math.PI / 180, 0); panoCam.fov = PS.B ? PS.A.fov + (PS.B.fov - PS.A.fov) * PS.mix : PS.A.fov; panoCam.updateProjectionMatrix(); panoCam.updateMatrixWorld();
+      if (PS.B) u.uYaw2.value = (yawB - yawA) * Math.PI / 180;
+      u.uAlpha.value = PS.alpha; renderer.autoClear = PS.alpha >= 1; renderer.render(panoScene, panoCam); renderer.autoClear = true; }
+  }
+  window.__panoOn = !!(PS && PS.alpha > .02);
+  if (!window.NO_UI) overlay(t); return true;
+};
+await fontReady; window.ready = true;
+</script></body></html>

@@ -1,0 +1,254 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>html,body{margin:0;background:#101012;overflow:hidden}#stage{position:relative;width:100vw;height:100vh}#stage canvas{position:absolute;left:0;top:0;width:100%;height:100%}</style></head>
+<body><div id="stage"><canvas id="gl"></canvas><canvas id="ui"></canvas></div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { buildVanta, makeRenderer, makeSky, lighting, viewportSize, parkedCars, planTexture, GOLD, GOLD_HI, IVORY, INK } from './vanta3d.js';
+const { w: W, h: H } = viewportSize();
+const gl = document.getElementById('gl'), ui = document.getElementById('ui'); ui.width = W; ui.height = H; const g2 = ui.getContext('2d');
+const renderer = makeRenderer(THREE, gl);
+const scene = new THREE.Scene();
+const v = buildVanta(THREE, { people: 16, mood: 'day' }); scene.add(v.group);
+const F = v.floors, C = v.dims.buildingCenter, CX = C[0], CZ = C[1];
+const FONT = `Inter, 'DejaVu Sans', Arial, sans-serif`;
+window.DURATION = 34;
+
+// ---------------------------------------------------------------- helpers
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const rp = (t, a, b) => cl((t - a) / (b - a));
+const sm5 = x => { x = cl(x); return x * x * x * (x * (6 * x - 15) + 10); };
+const eoc = x => 1 - Math.pow(1 - cl(x), 3);
+const eob = (x, c1 = 1.5) => { x = cl(x); const c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const lerp = (a, b, k) => a + (b - a) * k;
+const bump = (t, a, b, c, d) => sm5(rp(t, a, b)) * (1 - sm5(rp(t, c, d)));   // in a-b, hold, out c-d
+
+// ---------------------------------------------------------------- lighting: day <-> ink, continuously blended
+makeSky(THREE, scene, 'day'); const skyDay = scene.getObjectByName('sky'); skyDay.name = 'skyDay';
+makeSky(THREE, scene, 'ink'); const skyInk = scene.getObjectByName('sky'); skyInk.name = 'skyInk'; skyInk.material.transparent = true; skyInk.renderOrder = -9;
+const L = lighting(THREE, scene, 'day', { renderer, materials: v.materials }); const envDay = scene.userData.vantaEnv;
+const matsEnv = ['glassCurtain', 'gold', 'goldHi'];
+const col = (h) => new THREE.Color(h);
+const MOODS = {
+  day: { terrain: '#B9C1A4', grass: '#6E9148', paver: '#C2BDB1', paverPale: '#DDD8CB', asphalt: '#47484C', road: '#3B3C40' },
+  ink: { terrain: '#0b0b0d', grass: '#0b0b0d', paver: '#0b0b0d', paverPale: '#0b0b0d', asphalt: '#0b0b0d', road: '#0b0b0d' },
+};
+const cA = col('#000'), cB = col('#000');
+function applyMood(k, groundK) {   // k 0 = day, 1 = ink ; groundK 0 = day palette, 1 = void
+  L.key.intensity = lerp(2.5, 2.4, k); L.key.color.set(0xfff5e8).lerp(col(0xfff2e4), k); L.key.position.set(lerp(70, 65, k), lerp(95, 70, k), lerp(55, 45, k));
+  L.fill.intensity = lerp(.5, 1.5, k); L.fill.color.set(0x9cbcf0).lerp(col(0x6f8fd0), k);
+  L.hemi.intensity = lerp(.55, .8, k); L.hemi.color.set(0xbfd8ff).lerp(col(0x4a5a78), k); L.hemi.groundColor.set(0x8b8068).lerp(col(0x15151a), k);
+  L.rim.intensity = lerp(0, .7, k);
+  skyInk.material.opacity = k; skyInk.visible = k > 0.001; skyDay.visible = k < 0.999;
+  scene.background.set('#a9cdee').lerp(col(INK), k);
+  scene.fog.color.set(0xdfe9ef).lerp(col(0x121215), k); scene.fog.near = lerp(300, 220, k); scene.fog.far = lerp(1300, 700, k);
+  const env = k > .5 ? scene.userData.vantaEnv2 : envDay; matsEnv.forEach(n => { if (v.materials[n].envMap !== env) { v.materials[n].envMap = env; v.materials[n].needsUpdate = true; } });
+  Object.keys(MOODS.day).forEach(n => {
+    cA.set(MOODS.day[n]).lerp(col(MOODS.ink[n]), groundK); v.materials[n].color.copy(cA);   // site palette (day -> void)
+  });
+  v.materials.wall.color.set('#DAD5C9').lerp(col('#3A3A3E'), k); v.materials.leaf.color.set('#5C8A3C').lerp(col('#3a5e45'), k); v.materials.leaf2.color.set('#44773A').lerp(col('#2a4634'), k);
+}
+// second env (ink) for glass
+{ const keep = scene.userData.vantaEnv; lighting(THREE, scene, 'ink', { renderer, materials: v.materials }); scene.userData.vantaEnv2 = scene.userData.vantaEnv; scene.userData.vantaEnv = keep; }
+// re-create the day lights (lighting() above replaced them) and keep a handle
+const L2 = lighting(THREE, scene, 'day', { renderer, materials: v.materials }); scene.userData.vantaEnv2 = scene.userData.vantaEnv2; Object.assign(L, L2);
+const envD = scene.userData.vantaEnv; // day env of last call
+matsEnv.forEach(n => { v.materials[n].envMap = envD; });
+const envDayFinal = envD;
+{ const s = applyMood; }
+
+// ---------------------------------------------------------------- site pieces that shrink away / return
+const site = v.site; const pivot = new THREE.Vector3(CX, 0, CZ);
+const pieces = [site.people.group, site.cars.group, site.trees.group, site.pool.group, site.gate, site.guardhouse].filter(Boolean);
+function shrink(o, s) { s = Math.max(s, 1e-4); o.scale.setScalar(s); o.position.set(pivot.x * (1 - s), 0, pivot.z * (1 - s)); o.visible = s > 0.002; }
+
+// ---------------------------------------------------------------- the real typical floor plan on slab of level 5
+const PLAN_FLOOR = 6; // index of level 5
+const planTex = await planTexture(THREE, 's2_plan.png');
+const planMat = new THREE.MeshBasicMaterial({ map: planTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+const planMesh = new THREE.Mesh(new THREE.PlaneGeometry(34.2, 43.8), planMat); planMesh.rotation.x = -Math.PI / 2; planMesh.position.set(3.17, F[PLAN_FLOOR].level + 3.06, -1.21); planMesh.renderOrder = 5;
+F[PLAN_FLOOR].group.add(planMesh);
+// dark under-plate in the shape of the two blocks, so the drawing reads as a blueprint on black
+const underMat = new THREE.MeshBasicMaterial({ color: '#15161a', transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, toneMapped: false });
+for (const b of [v.blocks.north, v.blocks.south]) {
+  const sh = new THREE.Shape(); b.polygon.forEach((p, i) => i ? sh.lineTo(p[0], -p[1]) : sh.moveTo(p[0], -p[1])); sh.closePath();
+  const gg = new THREE.ShapeGeometry(sh); gg.rotateX(-Math.PI / 2); const m = new THREE.Mesh(gg, underMat); m.position.y = F[PLAN_FLOOR].level + 3.04; m.renderOrder = 4; F[PLAN_FLOOR].group.add(m);
+}
+
+const ceil = F[0].group.children.find(c => c.name === 'basementCeiling');
+// ---------------------------------------------------------------- the car that drives down the ramp
+const carGrp = parkedCars(THREE, [{ x: 0, z: 0, ang: 0, y: 0, c: '#F1EFEA' }]); scene.add(carGrp); carGrp.visible = false;
+const RP = [[1047, 792], [1158, 792], [1280, 930], [1047, 930]].map(p => v.dims.mapPx(p[0], p[1]));
+const xE = RP[2][0], xTop = Math.max(...RP.map(p => p[0])), rz = (RP[0][1] + RP[3][1]) / 2;
+const rampY = (x) => -Math.max(0, Math.min(3.3, Math.tan(14 * Math.PI / 180) * (xE - x)));
+const rampX0 = xE - 3.3 / Math.tan(14 * Math.PI / 180);   // x where the ramp reaches the basement slab
+
+// ---------------------------------------------------------------- timeline
+const G = 3.8, UMAX = 13, DMAX = 15;
+const T_EXP = 4.7;
+const T_ASM0 = 22.5;
+const asmStart = (i) => i === 0 ? T_ASM0 : T_ASM0 + 0.5 + (i - 1) * 0.19;
+const ASM_DUR = 1.25;
+function floorOffsets(t) {
+  const U = UMAX * sm5(rp(t, 15.6, 17.2)), D = DMAX * sm5(rp(t, 17.9, 19.5)) * (1 - sm5(rp(t, 21.7, 22.5)));
+  return F.map((f, i) => {
+    if (i === 1) return 0;
+    const baseG = i === 0 ? -G : (i - 1) * G;
+    const st = i === 0 ? T_EXP + 0.35 : T_EXP + (13 - i) * 0.105;
+    const e = eob(rp(t, st, st + 1.5), 1.5);
+    const a = eoc(rp(t, asmStart(i), asmStart(i) + ASM_DUR));
+    let bounce = 0; const u = (t - (asmStart(i) + ASM_DUR * .8)) / .45; if (u > 0 && u < 1 && i >= 2) bounce = .16 * Math.sin(Math.PI * u) * (1 - u);
+    const base = (i >= 2 ? baseG + U : baseG);
+    return i === 0 ? (baseG * e - D) * (1 - a) - 0 * bounce : base * e * (1 - a) * 1 + (a > .98 ? bounce : 0) * 0 + bounce;
+  });
+}
+// ---- camera keys: t, az, el, dist, tx, ty, tz, sx, sy
+const SX = -250, SY = 15;
+const planCenter = [CX + 48, 0, CZ];
+const keys = [
+  [0.0, 64, 8, 132, CX + 2, 17, CZ, 0, 250],
+  [4.2, 46, 12, 190, CX, 21, CZ, 0, 150],
+  [8.0, 30, 10, 300, CX, 38, CZ, SX, SY],
+  [10.0, 28, 10, 300, CX, 38, CZ, SX, SY],
+  [12.2, 0, 3, 128, null, null, CZ, 0, 70],   // plan station: ty/tx filled from floor
+  [14.4, 0, 4, 118, null, null, CZ, 0, 70],
+  [16.6, 22, 20, 100, CX, 2, CZ + 2, 0, 90],
+  [18.6, 40, 24, 92, CX + 4, 2, CZ + 2, 0, 90],
+  [20.2, 48, 30, 118, CX + 24, 0, CZ + 6, 0, 230],
+  [21.9, 58, 27, 108, CX + 22, 0, CZ + 6, 0, 230],
+  [24.0, 38, 10, 240, CX, 28, CZ, 0, 0],
+  [27.0, 52, 9, 170, CX, 20, CZ, 0, 0],
+  [30.0, 78, 11, 148, CX, 22, CZ, 0, 0],
+  [34.0, 104, 12, 128, CX, 24, CZ, 0, 0],
+];
+const cam = new THREE.PerspectiveCamera(32, W / H, 5, 2500);
+function camAt(t, offs) {
+  let i = 0; while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
+  const a = keys[i], b = keys[i + 1]; const u = sm5(rp(t, a[0], b[0]));
+  const get = (k, idx) => { // fill target of the plan station from the floor
+    let val = k[idx]; if (val !== null) return val;
+    if (idx === 4) return planCenter[0]; if (idx === 5) return F[PLAN_FLOOR].level + 1.6 + offs[PLAN_FLOOR]; return 0; };
+  const r = []; for (let j = 1; j < 9; j++) r.push(lerp(get(a, j), get(b, j), u)); return r;
+}
+// basement / ground stations follow the real floor positions
+function stationFix(t, offs, r) {
+  const yb = F[0].level + offs[0];
+  const kC = sm5(rp(t, 18.6, 20.2)) * (1 - sm5(rp(t, 21.9, 24.0)));
+  r[4] = lerp(r[4], yb + 1.5, kC); // ty
+  return r;
+}
+
+// ---------------------------------------------------------------- overlay
+const labelsDef = [ // anchor floors, text
+  { fl: [13], a: ['ROOF'], t: 7.35 }, { fl: [12], a: ['LEVEL 11'], t: 7.6 }, { fl: [2, 11], a: ['LEVELS 1–10', 'APARTMENTS'], t: 7.85, br: true },
+  { fl: [1], a: ['GROUND', 'ENTRANCE & PARKING'], t: 8.1 }, { fl: [0], a: ['BASEMENT PARKING'], t: 8.35 },
+];
+const LABEL_OUT0 = 9.35, LABEL_OUT1 = 10.0;
+const tmpV = new THREE.Vector3();
+const proj = (x, y, z) => { tmpV.set(x, y, z).project(cam); return [(tmpV.x + 1) / 2 * 1080, (1 - tmpV.y) / 2 * 1920]; };
+function txt(s, x, y, o = {}) {
+  g2.save(); g2.globalAlpha *= (o.alpha ?? 1); g2.font = `${o.weight || 600} ${o.size || 32}px ${FONT}`; g2.letterSpacing = (o.ls || 0) + 'px'; g2.textBaseline = 'alphabetic';
+  const w = g2.measureText(s).width; let px = x; if (o.align === 'center') px = x - (w - (o.ls || 0)) / 2; else if (o.align === 'right') px = x - w;
+  if (o.shadow !== false) { g2.shadowColor = o.shadowColor || 'rgba(0,0,0,.55)'; g2.shadowBlur = o.shadowBlur ?? 14; g2.shadowOffsetY = 2; }
+  g2.fillStyle = o.color || IVORY; g2.fillText(s, px, y); g2.restore(); return w;
+}
+function fitText(s, x, y, maxW, o) { let size = o.size; g2.save(); g2.font = `${o.weight || 600} ${size}px ${FONT}`; g2.letterSpacing = o.ls + 'px'; let w = g2.measureText(s).width; g2.restore(); if (w > maxW) { const k = maxW / w; o = { ...o, size: size * k, ls: o.ls * k }; } return txt(s, x, y, o); }
+function slideIn(t, a, d = .6) { const k = sm5(rp(t, a, a + d)); return k; }
+
+function drawOverlay(t, offs) {
+  g2.setTransform(W / 1080, 0, 0, H / 1920, 0, 0); g2.clearRect(0, 0, 1080, 1920); g2.globalAlpha = 1;
+  // ---- beat 1 title
+  { const k = bump(t, .45, 1.15, 3.1, 3.8); if (k > .001) {
+      const g = g2.createLinearGradient(0, 200, 0, 760); g2.globalAlpha = k * .5; g.addColorStop(0, 'rgba(16,16,18,.7)'); g.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = g; g2.fillRect(0, 200, 1080, 560);
+      g2.globalAlpha = k; const dy = (1 - k) * 28 * (t < 2 ? 1 : -1);
+      txt('WHAT’S INSIDE', 540, 420 + dy, { size: 34, ls: 12, align: 'center', color: GOLD_HI, weight: 600 });
+      g2.fillStyle = GOLD_HI; g2.globalAlpha = k * .9; g2.fillRect(540 - 40, 446 + dy, 80, 3); g2.globalAlpha = k;
+      fitText('Vanta House?', 540, 548 + dy, 880, { size: 118, ls: 1, align: 'center', weight: 700 });
+      g2.globalAlpha = 1; } }
+  // ---- labels beside the exploded stack
+  { const kOut = 1 - sm5(rp(t, LABEL_OUT0, LABEL_OUT1)); if (t > 7.2 && kOut > .001) {
+      const edge = (y) => { let m = -1e9; for (const [x, z] of [[v.dims.buildingBBox.min[0], v.dims.buildingBBox.min[1]], [v.dims.buildingBBox.max[0], v.dims.buildingBBox.min[1]], [v.dims.buildingBBox.max[0], v.dims.buildingBBox.max[1]], [v.dims.buildingBBox.min[0], v.dims.buildingBBox.max[1]]]) { const p = proj(x, y, z); m = Math.max(m, p[0]); } return m; };
+      const yOf = (i, f) => F[i].level + offs[i] + F[i].height * f;
+      let Lx = 0; labelsDef.forEach(d => { const y = yOf(d.fl[0], .5); Lx = Math.max(Lx, edge(y)); }); Lx += 62;
+      const ptsY = []; labelsDef.forEach(d => { const yy = d.fl.length > 1 ? (proj(CX, yOf(d.fl[0], .5), CZ)[1] + proj(CX, yOf(d.fl[1], .5), CZ)[1]) / 2 : proj(CX, yOf(d.fl[0], .5), CZ)[1]; ptsY.push(yy); });
+      { const ord = ptsY.map((y, i) => i).sort((a, b) => ptsY[a] - ptsY[b]); for (let q = 1; q < ord.length; q++) { const a = ord[q - 1], b = ord[q]; if (ptsY[b] - ptsY[a] < 74) ptsY[b] = ptsY[a] + 74; } }
+      labelsDef.forEach((d, n) => {
+        const k = sm5(rp(t, d.t, d.t + .55)) * kOut; if (k < .002) return;
+        const y = cl(ptsY[n], 330, 1420); g2.globalAlpha = k;
+        const ex = edge(yOf(d.fl[0], .5)); const x0 = ex + 6, wl = lerp(x0, Lx - 14, sm5(rp(t, d.t, d.t + .5)));
+        g2.strokeStyle = GOLD_HI; g2.lineWidth = 2; g2.shadowColor = 'rgba(0,0,0,.5)'; g2.shadowBlur = 6;
+        if (d.br) { const yt = proj(CX, yOf(d.fl[1], 1), CZ)[1], yb = proj(CX, yOf(d.fl[0], 0), CZ)[1]; const xb = Math.max(edge(yOf(d.fl[1], .5)), edge(yOf(d.fl[0], .5))) + 22;
+          g2.beginPath(); g2.moveTo(xb - 14, yt); g2.lineTo(xb, yt); g2.lineTo(xb, yb); g2.lineTo(xb - 14, yb); g2.stroke(); g2.beginPath(); g2.moveTo(xb, y); g2.lineTo(lerp(xb, Lx - 14, sm5(rp(t, d.t, d.t + .5))), y); g2.stroke(); }
+        else { g2.beginPath(); g2.moveTo(x0, y); g2.lineTo(wl, y); g2.stroke(); g2.fillStyle = GOLD_HI; g2.beginPath(); g2.arc(x0, y, 5, 0, 7); g2.fill(); }
+        g2.shadowBlur = 0; const tx = Lx + (1 - sm5(rp(t, d.t + .1, d.t + .6))) * 26; g2.globalAlpha = k * sm5(rp(t, d.t + .12, d.t + .55));
+        if (d.a.length === 1) fitText(d.a[0], tx, y + 12, 1050 - tx, { size: 38, ls: 5, weight: 700, color: IVORY });
+        else { txt(d.a[0], tx, y - 2, { size: 38, ls: 5, weight: 700 }); txt(d.a[1], tx, y + 34, { size: 25, ls: 3.5, weight: 600, color: GOLD_HI }); }
+      });
+      g2.globalAlpha = 1; } }
+  // ---- station labels
+  const station = (t0, t1, t2, t3, l1, l2, tag, y0) => { const k = bump(t, t0, t1, t2, t3); if (k < .002) return;
+    const dy = (1 - k) * 22; g2.globalAlpha = k;
+    const gr = g2.createLinearGradient(0, y0 - 90, 0, y0 + 150); gr.addColorStop(0, 'rgba(16,16,18,0)'); gr.addColorStop(.35, 'rgba(16,16,18,.72)'); gr.addColorStop(1, 'rgba(16,16,18,0)'); g2.fillStyle = gr; g2.fillRect(0, y0 - 90, 1080, 240);
+    txt(tag, 540, y0 + dy, { size: 24, ls: 8, align: 'center', color: GOLD_HI, weight: 600, shadow: false });
+    fitText(l1, 540, y0 + 58 + dy, 940, { size: 50, ls: 6, align: 'center', weight: 700, shadow: false });
+    if (l2) fitText(l2, 540, y0 + 100 + dy, 940, { size: 27, ls: 5, align: 'center', weight: 600, color: GOLD_HI, shadow: false });
+    g2.fillStyle = GOLD_HI; g2.fillRect(540 - 36, y0 + 14 + dy, 72, 2); g2.globalAlpha = 1; };
+  station(12.7, 13.3, 14.2, 14.8, 'TYPICAL FLOOR', 'FROM THE APPROVED PLAN', 'STATION 01', 300);
+  station(16.9, 17.5, 18.5, 19.1, 'GROUND LEVEL', 'ENTRANCE · COLUMNS · PARKING', 'STATION 02', 1310);
+  station(19.9, 20.5, 21.6, 22.2, 'BASEMENT PARKING', 'RAMP ACCESS', 'STATION 03', 1310);
+  // ---- end title
+  { const e = rp(t, 29.9, 31.0); if (e > 0) {
+      const gr = g2.createLinearGradient(0, 0, 0, 1920); gr.addColorStop(0, `rgba(16,16,18,${.55 * sm5(e)})`); gr.addColorStop(.5, `rgba(16,16,18,${.78 * sm5(e)})`); gr.addColorStop(1, `rgba(16,16,18,${.9 * sm5(e)})`); g2.fillStyle = gr; g2.fillRect(0, 0, 1080, 1920);
+      const k1 = sm5(rp(t, 30.4, 31.5)), k2 = sm5(rp(t, 31.0, 32.0)), k3 = sm5(rp(t, 31.4, 32.4)), k4 = sm5(rp(t, 31.8, 32.8));
+      g2.globalAlpha = k1; fitText('VANTA HOUSE', 540, 860 + (1 - k1) * 24, 900, { size: 112, ls: lerp(40, 14, k1), align: 'center', weight: 700 });
+      g2.globalAlpha = k2; g2.fillStyle = GOLD_HI; g2.fillRect(540 - 70 * k2, 920, 140 * k2, 3);
+      g2.globalAlpha = k3; txt('NAGURU, KAMPALA', 540, 996 + (1 - k3) * 16, { size: 38, ls: 12, align: 'center', color: GOLD_HI, weight: 600 });
+      g2.globalAlpha = k4 * .85; txt('Blackstone Real Estate', 540, 1066 + (1 - k4) * 12, { size: 28, ls: 3, align: 'center', color: IVORY, weight: 500 });
+      g2.globalAlpha = 1; } }
+  // ---- permanent note
+  g2.globalAlpha = .6; txt('3D illustration from the approved drawings. Not the final appearance.', 40, 1868, { size: 22, ls: 0.4, weight: 500, shadowBlur: 8, shadowColor: 'rgba(0,0,0,.7)' }); g2.globalAlpha = 1;
+}
+
+// ---------------------------------------------------------------- renderAt
+window.__R = renderer; window.__S = scene;
+window.renderAt = (t) => {
+  const k = sm5(rp(t, 3.5, 5.0)) * (1 - sm5(rp(t, 23.8, 26.2)));
+  const gK = sm5(rp(t, 4.2, 5.4)) * (1 - sm5(rp(t, 23.6, 25.2)));
+  applyMood(k, gK);
+  v.update(t);
+  // site: life shrinks away into the tower, ground goes to void then hides, all return with daylight
+  const sLife = (1 - sm5(rp(t, 3.7, 4.7))) + sm5(rp(t, 25.0, 26.8)) * (t > 12 ? 1 : 0); const s = cl(sLife);
+  pieces.forEach((o, i) => { const off = i * .08; const s2 = t < 12 ? 1 - sm5(rp(t, 3.6 + off, 4.6 + off)) : sm5(rp(t, 24.6 + off, 26.2 + off)); shrink(o, s2); });
+  site.ground.visible = !(t > 5.5 && t < 23.2);
+  // floors
+  const offs = floorOffsets(t); F.forEach((f, i) => { f.group.position.set(0, offs[i], 0); f.group.rotation.set(0, 0, 0); });
+  // plan station: level 5 slides out and tilts, plan appears
+  { const slide = 48 * sm5(rp(t, 10.0, 11.7)) * (1 - sm5(rp(t, 14.9, 16.1))), tilt = 79 * Math.PI / 180 * sm5(rp(t, 11.3, 12.7)) * (1 - sm5(rp(t, 14.4, 15.5)));
+    const f = F[PLAN_FLOOR], g = f.group; const p0 = new THREE.Vector3(CX, f.level + .5, CZ); g.rotation.set(tilt, 0, 0);
+    const rot = p0.clone().applyEuler(g.rotation); g.position.set(p0.x + slide - rot.x, offs[PLAN_FLOOR] + (p0.y - rot.y) + 0, p0.z - rot.z);
+    const pa = bump(t, 12.3, 13.5, 14.0, 14.7); planMat.opacity = pa; underMat.opacity = bump(t, 11.5, 12.5, 14.6, 15.2) * .94; planMesh.visible = pa > .002; underMat.visible = underMat.opacity > .002;
+    window.__planSlide = slide; }
+  // camera
+  let r = camAt(t, offs); r = stationFix(t, offs, r);
+  // station a: follow the real, sliding floor
+  { const sl = window.__planSlide; const ka = bump(t, 10.2, 12.2, 14.4, 16.6); if (ka > 0) { r[3] = lerp(r[3], r[3], 1); } }
+  const az = (r[0] + (t > 24 ? 0 : 0)) * Math.PI / 180, el = r[1] * Math.PI / 180, d = r[2];
+  const tx = r[3], ty = r[4], tz = r[5];
+  // slow hand-held-like drift so nothing is ever static
+  const dr = Math.sin(t * .9) * .25;
+  cam.position.set(tx + Math.sin(az) * Math.cos(el) * d, ty + Math.sin(el) * d, tz + Math.cos(az) * Math.cos(el) * d);
+  cam.lookAt(tx, ty, tz); cam.setViewOffset(W, H, -r[6] * W / 1080, -r[7] * H / 1920, W, H); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+  // car down the ramp
+  { const t0 = 19.35, t1 = 22.0; const u = (t - t0) / (t1 - t0); const vis = u > 0 && u < 1.02;
+    carGrp.visible = vis; if (vis) { const xS = xE + 1.5, xEnd = rampX0 - 12; const e = u < .5 ? 1 : 1; const x = lerp(xS, xEnd, cl(u));
+      const baseY = offs[0]; const y = baseY + rampY(Math.min(x, xE)) ; const slope = (x < xE && x > rampX0) ? 14 * Math.PI / 180 : 0;
+      carGrp.rotation.order = 'YXZ'; carGrp.rotation.set(slope, -Math.PI / 2, 0); carGrp.position.set(x, y, rz); const sc = sm5(rp(t, t0, t0 + .4)) * (1 - sm5(rp(t, t1 - .25, t1 + .1))); carGrp.scale.setScalar(Math.max(sc, 1e-3)); } }
+  { const sl = sm5(rp(t, 18.6, 19.9)) * (1 - sm5(rp(t, 21.5, 22.5))); if (ceil) { ceil.position.set(-70 * sl, 3 * sl, 0); ceil.visible = sl < .98; } }
+  // basement ramp rides along with the basement
+  site.ramp.position.y = offs[0];
+  renderer.render(scene, cam);
+  drawOverlay(t, offs);
+  return true;
+};
+window.ready = true;
+</script></body></html>
