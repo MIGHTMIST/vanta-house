@@ -42,11 +42,11 @@ L2 = R9.L2
 
 if VID == 'n2':
     HOOK = ('BEFORE YOU BUY A FLAT', 'IN KAMPALA, WATCH THIS.')
-    ai(0, 3, 'A01', 0.0, 0.85)                                  ; COVERS.append((1.55, 2.5, 'onsite'))
+    ai(0, 3, 'A01', 0.0, 0.85)                                  ; COVERS.append((2, 3, 'onsite'))
     black(3, 4)
-    ai(4, 8, 'A03', 0.0, 1.5)                                   ; COVERS += [(5.55, 6.5, 'vanta'), (6.8, 7.9, 'realwork')]
-    full(8, 10.5, ('GV3A0032', 0.0, 3.3), cx=(0.60, 0.74), sp=0.6); TAG = (8.3, 10.5, 'NAGURU, KAMPALA')
-    black(10.5, 12)
+    ai(4, 8, 'A03', 0.0, 1.5)                                   ; COVERS += [(5, 6, 'vanta'), (6, 7, 'realwork')]
+    full(8, 11, ('GV3A0032', 0.0, 3.3), cx=(0.60, 0.74), sp=0.6); TAG = (9, 11, 'NAGURU, KAMPALA')
+    black(11, 12)
     ai(12, 16, 'A10', 0.2, 0.75, boom=True)
     ai(16, 17, 'A06', 2.0, 1.25, flash=True)
     for k, src, cx in [(17, ('GV3A0019', 2.5, 5.6), (0.70, 0.76)), (18, ('GV3A9992', 0.0, 2.0), (0.55, 0.60)), (19, ('GV3A0017', 0.0, 2.2), (0.40, 0.45))]:
@@ -61,7 +61,7 @@ if VID == 'n2':
     full(28, 29, ('GV3A0036', 15.0, 18.0), cx=(0.55, 0.60), sp=0.5, boom=True)
     ai(29, 30, 'A12', 0.4, 2.2, flash=True)
     full(30, 32, ('GV3A0044', 3.5, 7.4), cx=(0.42, 0.48), sp=0.5, flash=True, boom=True)
-    full(32, 33, ('GV3A9982', 6.0, 12.0), cx=(0.40, 0.44), sp=0.5, flash=True); SWOOSH.append(32)
+    full(32, 33, ('GV3A9991', 3.0, 5.6), cx=(0.40, 0.44), sp=0.5, flash=True); SWOOSH.append(32)     # (9982 6-12: worker faces the lens)
     ai(33, 34, 'A02', 0.3, 2.2)
     full(34, 36, ('GV3A9989', 0.0, 3.0), cx=(0.56, 0.62), sp=0.45)
     ai(36, 38, 'A11', 0.0, 1.2)
@@ -107,7 +107,7 @@ else:   # build
     photo(27, 29, 'u06.jpg', slam=True); STACKS.append((27, 29, ['ROOM', 'BY ROOM.']))
     full(29, 31, ('GV3A0044', 3.5, 7.4), cx=(0.42, 0.47), sp=0.45, boom=True); COVERS += [(29.0, 29.9, 'vanta'), (30.0, 30.9, 'naguru')]
     card(31, 32, ('photo', 'u14.jpg'), ['ON SITE'])
-    full(32, 34, ('GV3A9982', 6.0, 12.0), cx=(0.40, 0.44), sp=0.45, flash=True); SWOOSH.append(32)
+    full(32, 34, ('GV3A9989', 3.0, 5.5), cx=(0.56, 0.61), sp=0.45, flash=True); SWOOSH.append(32)     # (9982 6-12: worker faces the lens)
     ai(34, 35, 'A02', 2.4, 1.2)
     photo(35, 36, 'u08.jpg', cx=(0.30, 0.45))
     ai(36, 38, 'A11', 0.0, 1.4)
@@ -236,7 +236,8 @@ def frame(fi, rng):
     for ks in STREAKS: c = R9.streak(c, (t - tv(ks)) / 0.55)
     for k0c, k1c, nm in COVERS:                           # stutter: on 4 frames, off 3, alternating tilt
         f0c, f1c = fk(k0c), fk(k1c)
-        if f0c <= fi < f1c and ((fi - f0c) % 7) < 4: c = put_cover(c, nm, (fi - f0c) // 7, dy=(190 if (HOOK and M0 == 0 and t < tv(3)) else 60))
+        qb = (t + M0 - B(k0c)) / (BT / 4)                 # flicker on the quarter beats (16th notes): on, off, on, off
+        if f0c <= fi < f1c and (qb % 1) < 0.62: c = put_cover(c, nm, int(qb), dy=(190 if (HOOK and M0 == 0 and t < tv(3)) else 60))
     if TITLE and tv(TITLE[0]) <= t < tv(TITLE[1]):
         uu = t - tv(TITLE[0]); c = BASE.title_behind(c, 140, 40, ease((uu - 0.35) / 0.4))
     if TAG and tv(TAG[0]) <= t < tv(TAG[1]):

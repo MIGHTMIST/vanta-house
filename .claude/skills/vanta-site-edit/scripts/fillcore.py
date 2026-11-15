@@ -14,7 +14,7 @@ class SrcF:
                                 '-vf', 'fps=30,scale=%d:%d' % (FW, FH), '-pix_fmt', 'rgb24', '-f', 'rawvideo', '-'], capture_output=True)
             a = np.frombuffer(p.stdout, np.uint8); n = a.size // (FW * FH * 3)
             SrcF.cache[key] = (a[:n * FW * FH * 3].reshape(n, FH, FW, 3), t0)
-            while len(SrcF.cache) > 4: del SrcF.cache[next(iter(SrcF.cache))]
+            while len(SrcF.cache) > int(__import__("os").environ.get("SRC_CACHE", "2")): del SrcF.cache[next(iter(SrcF.cache))]
         self.f, self.t0 = SrcF.cache[key]
 
     def crop(self, t, x0, y0, cw, ch, ow, oh):

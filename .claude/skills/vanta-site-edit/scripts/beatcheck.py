@@ -9,7 +9,7 @@ while True:
     g = cv2.resize(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), (90, 160)).astype(np.float32)
     d.append(0.0 if prev is None else float(np.abs(g - prev).mean())); prev = g
 d = np.array(d); med = np.median(d)
-cuts = [i for i in range(1, len(d)) if d[i] > max(25, 5 * med) and d[i] >= d[max(i - 1, 0)] and d[i] >= d[min(i + 1, len(d) - 1)]]
+cuts = [i for i in range(1, len(d)) if d[i] > max(11, 3.2 * med) and d[i] >= d[max(i - 1, 0)] and d[i] >= d[min(i + 1, len(d) - 1)]]
 offs = []
 for i in cuts:
     ts = i / 30 + M0; k = round((ts - PH0) / BT * 4) / 4          # nearest quarter beat

@@ -58,7 +58,7 @@ for i, s in enumerate(V.SH):
     if kind == 'black' and t1 < END - 0.1: place(REV[-int(0.7 * SR):], t1 - 0.7, -16, fi=0.2); place(IMP, t1, -8)
 for k0c, k1c, nm in V.COVERS:
     f0, f1 = V.fk(k0c), V.fk(k1c)
-    for f in range(f0, f1, 7): place(SHUT, f / 30, -15)
+    for q in range(int(round((V.B(k1c) - V.B(k0c)) / (V.BT / 4)))): place(SHUT, V.tv(k0c + q * 0.25), -16)
 for k0s, k1s, lines in V.STACKS:
     for j in range(len(lines)): place(POP, B(k0s + j), -15)
 for ks in V.STREAKS: place(SWIN, B(ks), -19)

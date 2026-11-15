@@ -4,7 +4,7 @@ H=/tmp/claude-0/-home-user-vanta-house/253db02e-90a6-5547-b8b3-69bd9a44cdc8/scra
 OUT=/tmp/claude-0/-home-user-vanta-house/253db02e-90a6-5547-b8b3-69bd9a44cdc8/scratchpad/out
 cd $H
 for v in ${@:-n2 crew build}; do
-  case $v in n2) n=VantaHouse_Site_R4_1_CINEMATIC.mp4; parts="a b c";; crew) n=VantaHouse_Site_R4_2_CREW_loop.mp4; parts="a b";; build) n=VantaHouse_Site_R4_3_BUILDING_loop.mp4; parts="a b";; esac
+  case $v in n2) n=VantaHouse_Site_R4_1_CINEMATIC.mp4; parts="a1 a2 b c1 c2";; crew) n=VantaHouse_Site_R4_2_CREW_loop.mp4; parts="a b";; build) n=VantaHouse_Site_R4_3_BUILDING_loop.mp4; parts="a b";; esac
   O=$OUT/$n; ins=""; fc=""; i=0; lab=""
   for p in $parts; do ins="$ins -i p10_$v$p.mp4"; fc="$fc[$i:v]setpts=PTS-STARTPTS[v$i];"; lab="$lab[v$i]"; i=$((i+1)); done
   ffmpeg -v error -y $ins -i final_mix10_$v.wav -filter_complex "$fc${lab}concat=n=$i:v=1:a=0[v]" \
