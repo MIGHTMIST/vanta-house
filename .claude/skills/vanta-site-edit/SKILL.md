@@ -119,3 +119,12 @@ reflections); R27 anime edit (cinema crop, typed words, cuts on action).
 - Picking method that worked: contact sheets of every moment as four 9:16 crops + sharpness, my own A/B/C pass, then
   a Sonnet second opinion; both agreed on the A list. Moving pans (e.g. GV3A0028 21.2-22) look smeared in slow motion:
   start after the pan settles.
+- 16 Nov (v3 delivered: out/VantaHouse_Site_FULLSCREEN_v3.mp4): QA at 2 fps + full frames caught (1) a shot cut from
+  the middle of a camera pan (GV3A0028 22-23 s) that smears in slow motion -> replaced with owner photo u04;
+  (2) green-dominant frames (GV3A9987 tower in green net through trees) get a PINK sky from the white-balance step ->
+  do not use them, or grade them by hand; (3) GV3A9980 22.8-23.1 s the worker's body passes the lens -> start at 23.4.
+  Fix only the bad beat: render that frame range alone and splice it in with the concat filter (frame-exact trims).
+- 16 Nov: the AI version is handed to his browser (Cowork) chat: prompt `handoff/AI_CAMERA_MOVES_PROMPT.md`, 12 cleaned
+  9:16 source clips `AI_SRC_A01..A12` in Drive folder 1ZYZefhNMUZ_K4jFBdepz-AoSv2hUBeLC (made by `prep_ai.py`).
+  Results come back as `AI_OUT_A..` + `AI_OUT_REPORT.txt`; review every frame for warping/added people before use,
+  then cut Version B with the same render7 timeline (swap the matching beats).
