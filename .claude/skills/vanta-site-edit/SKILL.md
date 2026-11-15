@@ -173,3 +173,19 @@ reflections); R27 anime edit (cinema crop, typed words, cuts on action).
 - 15 Nov: strips that land a beat apart leave half the screen black for over a second: never; always 4 frames apart.
   Soft/smeared shots to avoid: GV3A0020 0.6-2 (camera moving), GV3A0035 0-2.6 (fast worker motion blur);
   GV3A9982 12-18 has a small worker facing the camera.
+- 15 Nov ROUND 4 (`scripts/render10.py`, VID=n2|crew|build; `sfx10.py`; `finish10.sh` + `beatcheck.py`). His notes on the
+  47 s set: "FOLLOW THE BEAT" (said many times), slow some shots then "boom" on the hit, short videos that HIT and LOOP,
+  best parts only, no John (the video is about the building and the workers), no floor-reveal "curtain" (the teal line
+  rising with grey above it), grade properly from his colour samples, and one video cut like his Spider-Man ref (N2).
+  * Beat grid re-measured on the drums (HPSS + phase scan): B(k) = 0.230 + 0.723 k, hits within +-15 ms, claps on odd k.
+    Cuts go on the frame NEAREST the beat (frame = round(beat*30)); the new shot lands SHARP (no whip blur at its start)
+    with a zoom punch (stronger on the claps) and a small punch on every clap inside long shots; slow-mo shots ramp 3.2x
+    in their last 7 frames with motion blur + whoosh = "slow ... slow ... BOOM". No cuts at fractional beats except bursts.
+  * N2 (Spider-Man ref) uses THE SAME SONG from the same start: its cuts are on whole beats 3,4,8,10.5,12,16,17..24 (one
+    per beat in the verse), 29, 30, 33, 36, 38, 44; 1-1.5 beats of black at k3-4 and k10.5-12; white flash on k16; comic
+    covers stutter on/off (4 on / 3 off frames) over the long intro shots; ends flash + black + name tag flicker (k44-48).
+    Our covers: ON SITE (halftone u14), VANTA HOUSE magazine (u08 + masthead), REAL WORK. (halftone u02), NAGURU (u09).
+  * Loops: song window beat 16 -> 40 (17.35 s; starts on the drop, ends on a beat). The last shot is the START of the
+    first shot's clip, so the picture runs on seamlessly across the loop.
+  * Grade = `look10.film_look` over every frame (his R15/R12 samples): deep teal sky darker at the top, teal shadows /
+    warm highlights, earth tones richer, greens muted, hi-vis brightest, blacks lifted to ~10, highlights rolled to ~235.
