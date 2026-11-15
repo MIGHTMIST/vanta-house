@@ -23,7 +23,7 @@ from look10 import film_look
 BT = 0.723; PH0 = 0.230
 def B(k): return PH0 + BT * k
 M0 = 0.0 if VID == 'n2' else B(16)                     # song time at video frame 0
-END = (B(48) if VID == 'n2' else B(40)) - M0
+END = (B(48) if VID in ('n2', 'offplan') else B(40)) - M0
 NF = int(round(END * FPS))
 def fk(k): return int(round((B(k) - M0) * FPS))         # frame index of beat k
 def tv(k): return fk(k) / FPS
@@ -37,6 +37,8 @@ def photo(k0, k1, name, **o): SH.append(dict(kind='photo', k0=k0, k1=k1, name=na
 def black(k0, k1): SH.append(dict(kind='black', k0=k0, k1=k1))
 def card(k0, k1, src, lines, cx=0.5): SH.append(dict(kind='halftone', k0=k0, k1=k1, src=src, cx=cx, lines=lines, flash=True))
 HOOK = None; STACKS = []; COVERS = []; SWOOSH = []; TAG = None; TITLE = None; LYR = []; ENDTAG = None; STREAKS = []
+STEPS = []; BLUESTUT = []; DATETAG = []; ENDCARD = None
+def blue(k0, k1, name, start): SH.append(dict(kind='blue', k0=k0, k1=k1, ai_src=(name, start)))
 L1b = [("IT'S", 14.3, 0), ('NOW', 14.6, 0), ('OR', 15.0, 1), ('NEVER.', 15.5, 1)]          # first line: only the urgent half
 L2 = R9.L2
 
@@ -92,6 +94,33 @@ elif VID == 'crew':
     full(37, 38, ('GV3A0016', 3.0, 5.8), cx=(0.74, 0.78), sp=0.55)
     ai(38, 40, 'A01', 0.0, 1.0)
     LYR.append((L2, 28.6))
+elif VID == 'offplan':
+    # OFF-PLAN EXPLAINED (loop k16 -> k48, 23.1 s). Facts only: no prices, no returns, no payment numbers.
+    HOOK = ('BUYING A FLAT OFF-PLAN?', "HERE'S HOW IT WORKS.")
+    blue(16, 18, 'A08', 0.0)                                      # the building as a plan (drawn from the real shot)
+    ai(18, 20, 'A08', 0.0, 1.4); BLUESTUT.append((18, 19))       # plan -> real, flickering on the 16th notes
+    ai(20, 22, 'A03', 0.4, 1.6)
+    full(22, 24, ('GV3A9991', 3.0, 5.6), cx=(0.40, 0.45), sp=0.5, boom=True)
+    STEPS.append((20, 24, 1)); STACKS.append((20, 24, ['YOU BUY IT', "BEFORE IT'S BUILT."]))
+    full(24, 26, ('GV3A0019', 2.5, 5.6), cx=(0.70, 0.75), sp=0.5)
+    full(26, 28, ('GV3A0017', 0.0, 2.2), cx=(0.40, 0.45), sp=0.55, boom=True)
+    STEPS.append((24, 28, 2)); STACKS.append((24, 28, ['YOU PAY', 'IN PARTS.']))
+    ai(28, 30, 'A10', 0.2, 2.4)
+    full(30, 32, ('GV3A9989', 0.0, 3.0), cx=(0.56, 0.60), sp=0.5, boom=True)
+    STEPS.append((28, 32, 3)); STACKS.append((28, 32, ['YOU CHOOSE', 'YOUR FLOOR.']))
+    photo(32, 34, 'u08.jpg', slam=True)
+    full(34, 36, ('GV3A0032', 0.0, 3.3), cx=(0.60, 0.72), sp=0.55)
+    STEPS.append((32, 36, 4)); STACKS.append((32, 36, ['LIVE IN IT', 'OR RENT IT OUT.']))
+    card(36, 37, ('GV3A0016', 0.0, 3.0), ['THE RULE:'], cx=0.72)
+    full(37, 38, ('GV3A0021', 2.5, 5.3), cx=(0.55, 0.60), sp=0.55)
+    full(38, 40, ('GV3A9980', 5.5, 8.5), cx=(0.25, 0.25), sp=0.5, echo=True, boom=True)
+    STACKS.append((37, 40, ['SEE THE SITE', 'BEFORE YOU PAY.']))
+    full(40, 41, ('GV3A9992', 0.0, 2.0), cx=(0.55, 0.60), sp=0.55)
+    full(41, 42, ('GV3A0028', 0.0, 3.0), cx=(0.55, 0.59), sp=0.55)
+    full(42, 43, ('GV3A0018', 3.0, 5.5), cx=(0.55, 0.59), sp=0.5)
+    full(43, 44, ('GV3A0036', 15.0, 18.0), cx=(0.55, 0.60), sp=0.55)
+    DATETAG.append((38, 44))
+    full(44, 48, ('GV3A9990', 3.0, 5.4), cx=(0.42, 0.46), sp=0.35, flash=True); ENDCARD = (44, 0.45)
 else:   # build
     HOOK = ('BUYING OFF-PLAN IN KAMPALA?', 'SEE THE REAL SITE FIRST.')
     AW = 2 * BT * 1.4
@@ -203,11 +232,49 @@ def picture(s, fi):
             if e < 0.8: img = motion_blur_x(img, int(40 * (1 - e)))
         return img
     if kind == 'black': return np.full((H, W, 3), 2.0, np.float32)
+    if kind == 'blue':
+        im = blueprint(*s['ai_src']); z = 1.0 + 0.04 * ease(u / max(dur, 0.01))
+        return punch(im, z - 1.0)
     if kind == 'halftone':
         src = s['src']
         img = BASE.photo(src[1], 0.3, W, H, (0.5, 0.5), dur=1.0) if src[0] == 'photo' else BASE.clipframe(src, 0.6, W, H, (s['cx'], s['cx']), 0.5)
         return halftone_fast(img, pitch=10.0)
     raise ValueError(kind)
+
+_bp = {}
+def blueprint(name, start):
+    """the building as an architect's plan: edges of the REAL frame drawn in light lines on a teal-dark grid"""
+    key = (name, start)
+    if key in _bp: return _bp[key]
+    f, i0 = BASE.AiF.get(name, start, start + 0.3)
+    img = f[max(int(start * 24) - i0, 0)].astype(np.uint8)
+    g = cv2.bilateralFilter(cv2.cvtColor(img, cv2.COLOR_RGB2GRAY), 7, 40, 7)
+    e = cv2.Canny(g, 45, 120); e = cv2.dilate(e, np.ones((2, 2), np.uint8)).astype(np.float32) / 255
+    soft = cv2.GaussianBlur(e, (0, 0), 0.8); glow = np.clip(cv2.GaussianBlur(e, (0, 0), 6) * 1.6, 0, 1)
+    yy = np.linspace(0, 1, H, dtype=np.float32)[:, None, None]
+    bg = np.array([12, 46, 58], np.float32) * (1 - yy) + np.array([6, 26, 36], np.float32) * yy
+    bg = np.repeat(np.repeat(bg, 1, 0), W, 1)
+    grid = np.zeros((H, W), np.float32); grid[::54, :] = 0.10; grid[:, ::54] = 0.10; grid[::270, :] = 0.22; grid[:, ::270] = 0.22
+    lum = g.astype(np.float32)[..., None] / 255
+    out = bg + lum * np.array([20, 60, 64], np.float32) * 0.5 + grid[..., None] * np.array([90, 190, 190], np.float32)
+    out = out + glow[..., None] * np.array(TEAL, np.float32) * 0.55
+    out = out * (1 - soft[..., None]) + np.array([228, 250, 246], np.float32) * soft[..., None]
+    # title block like a real drawing sheet (bottom right)
+    x0, y0, x1, y1 = 600, 1640, 1040, 1830
+    out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * 0.25 + np.array([8, 32, 42], np.float32) * 0.75
+    cv2.rectangle(out, (x0, y0), (x1, y1), (200, 240, 236), 2); cv2.line(out, (x0, y0 + 70), (x1, y0 + 70), (200, 240, 236), 2)
+    out = paste(out, text_rgba('VANTA HOUSE', 'Inter-ExtraBold.otf', 44, fill=(228, 250, 246), tracking=4), (x0 + x1) / 2, y0 + 36, shadow=0)
+    out = paste(out, text_rgba('NAGURU, KAMPALA', 'Inter-SemiBold.otf', 30, fill=(160, 220, 214), tracking=4), (x0 + x1) / 2, y0 + 110, shadow=0)
+    out = paste(out, text_rgba('ON PLAN', 'Inter-SemiBold.otf', 30, fill=TEAL, tracking=6), (x0 + x1) / 2, y0 + 155, shadow=0)
+    _bp[key] = np.clip(out, 0, 255)
+    return _bp[key]
+
+T_DATE = text_rgba('REAL SITE  \u00b7  FILMED 7 NOV 2026', 'Inter-SemiBold.otf', 34, fill=(240, 240, 240), tracking=3)
+T_CTA = None
+_stepl = {}
+def steplabel(n):
+    if n not in _stepl: _stepl[n] = text_rgba('STEP %d OF 4' % n, 'Inter-SemiBold.otf', 40, fill=(242, 242, 242), tracking=6)
+    return _stepl[n]
 
 def punch(c, amt):
     if amt < 0.003: return c
@@ -218,7 +285,10 @@ def frame(fi, rng):
     t = fi / FPS; i = shot_at(fi); s = SH[i]; kind = s['kind']
     c = picture(s, fi)
     kin = fi - s['f0']; u = t - s['t0']
-    if kind not in ('black', 'halftone'): c = film_look(c)
+    if kind not in ('black', 'halftone', 'blue'): c = film_look(c)
+    for k0b, k1b in BLUESTUT:                            # plan <-> real flicker on the 16th notes
+        if fk(k0b) <= fi < fk(k1b) and ((t + M0 - B(k0b)) / (BT / 4)) % 1 < 0.5:
+            bs = [x for x in SH if x['kind'] == 'blue'][0]; c = blueprint(*bs['ai_src']).copy()
     # boom ramp: the last frames before the cut get motion blur from the speed-up
     if s.get('boom') and s['f1'] - fi <= 7 and kind == 'full': c = motion_blur_x(c, 10 * (8 - (s['f1'] - fi)))
     # on the beat: the new shot lands sharp with a zoom punch (bigger on the claps = odd beats)
@@ -259,7 +329,25 @@ def frame(fi, rng):
             out = 1 - ease((t - (tv(k1s) - 0.12)) / 0.12)
             for j, ln in enumerate(lines):
                 if t >= tv(k0s + j):
-                    r = R9.tword(ln, R9.fit(ln, 150, 960)); c = R9.pop(c, r, 64 + r.shape[1] / 2, 330 + j * 160, t - tv(k0s + j), hold_alpha=out, halo_k=0.6)
+                    y0s = 420 if STEPS else 330
+                    r = R9.tword(ln, R9.fit(ln, 150, 960)); c = R9.pop(c, r, 64 + r.shape[1] / 2, y0s + j * 160, t - tv(k0s + j), hold_alpha=out, halo_k=0.6)
+    for k0s, k1s, n in STEPS:                            # small "STEP n OF 4" label above the stacked words
+        if tv(k0s) <= t < tv(k1s):
+            out = 1 - ease((t - (tv(k1s) - 0.12)) / 0.12); r = steplabel(n); uu = t - tv(k0s)
+            c = bar(c, 64 + 36, 214, out * ease(uu / 0.25), w=72, grow=ease(uu / 0.3))
+            c = R9.pop(c, r, 64 + r.shape[1] / 2, 254, uu, hold_alpha=out, halo_k=0.55)
+    for k0d, k1d in DATETAG:                             # proof: the real date of the footage
+        if tv(k0d) <= t < tv(k1d):
+            uu = t - tv(k0d); al = ease(uu / 0.3) * (1 - ease((t - (tv(k1d) - 0.15)) / 0.15))
+            c = R9.halo(c, T_DATE, 540, 1800, al, 1.0, 0.55); c = paste(c, T_DATE, 540, 1800, alpha=al, shadow=0.4)
+    if ENDCARD is not None and t >= tv(ENDCARD[0]) + ENDCARD[1]:
+        global T_CTA
+        if T_CTA is None: T_CTA = R9.tword('MESSAGE US FOR A FREE SITE VISIT.', R9.fit('MESSAGE US FOR A FREE SITE VISIT.', 62, 960))
+        ue = t - (tv(ENDCARD[0]) + ENDCARD[1]); r = R9.tword('VANTA HOUSE', R9.fit('VANTA HOUSE', 150, 980))
+        c = c * (1 - 0.32 * ease(ue / 0.5)); c = bar(c, 540, int(860 - r.shape[0] / 2 - 18), ease(ue / 0.4), grow=ease(ue / 0.5))
+        c = R9.pop(c, r, 540, 860, ue, big=True)
+        c = paste(c, R9.T_NKE, 540, 990, alpha=ease((ue - 0.3) / 0.4))
+        c = R9.pop(c, T_CTA, 540, 1110, ue - BT, halo_k=0.6)
     for words, tend in LYR:                               # the song's words, as sung, in the ON SITE look
         ts = t + M0
         if not (words[0][1] - 0.05 <= ts < tend): continue

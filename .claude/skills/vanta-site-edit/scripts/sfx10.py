@@ -65,6 +65,11 @@ for ks in V.STREAKS: place(SWIN, B(ks), -19)
 for ks in V.SWOOSH: place(CINE, B(ks) - 0.15, -12)
 if V.TAG: place(POP, B(V.TAG[0]), -15)
 if V.ENDTAG is not None: place(BOOM, B(44) - 0.01, -7); place(LOGO, B(V.ENDTAG) + 0.02, -12)
+for k0b, k1b in V.BLUESTUT:
+    for q in range(4): place(CLICK if q % 2 else SHUT, V.tv(k0b + q * 0.25), -17)
+if V.ENDCARD is not None:
+    tcard = V.tv(V.ENDCARD[0]) + V.ENDCARD[1]
+    place(REV[-int(0.8 * SR):], tcard - 0.8, -16, fi=0.2); place(LOGO, tcard + 0.02, -12); place(POP, tcard + V.BT, -15)
 if V.M0 == 0: place(RISER, B(16) - RISER.shape[0] / SR, -18, fi=0.3)
 
 # music: the owner's song, the window this video uses (loops: beat 16 -> 40, so the end runs into the start)

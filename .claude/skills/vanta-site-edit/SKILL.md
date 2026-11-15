@@ -189,3 +189,14 @@ reflections); R27 anime edit (cinema crop, typed words, cuts on action).
     first shot's clip, so the picture runs on seamlessly across the loop.
   * Grade = `look10.film_look` over every frame (his R15/R12 samples): deep teal sky darker at the top, teal shadows /
     warm highlights, earth tones richer, greens muted, hi-vis brightest, blacks lifted to ~10, highlights rolled to ~235.
+- 15 Nov: handing videos to another chat (upscaling): prompt `handoff/UPSCALE_PROMPT.md`, Drive folder "UPSCALE - Vanta
+  site videos R4 (15 Nov 2026)" (1d50EaFX2opi6WORfvGTpOQeVvnyE207H). Drive uploads from this session are capped at 10 MB:
+  videos must be dropped in by the owner (never shrink a master to fit). Our masters are already 1080x1920: the job is
+  detail/restoration with an upscaler (Topaz/SeedVR2), never a generator (Seedance redraws), 30 fps, same frame count.
+- 15 Nov OFF-PLAN video (VID=offplan, loop k16->k48 = 23.1 s): he asked for "off-plan and investment". Marketing rules
+  allow NO prices, yields, returns, payment numbers ("you pay in parts" only). Script: hook "BUYING A FLAT OFF-PLAN? /
+  HERE'S HOW IT WORKS." over a BLUEPRINT of the real tower (Canny edges of the A08 frame on a teal grid + title block
+  "ON PLAN"), flicker plan<->real on 16th notes, then STEP 1-4 OF 4: YOU BUY IT / BEFORE IT'S BUILT. - YOU PAY / IN PARTS.
+  - YOU CHOOSE / YOUR FLOOR. - LIVE IN IT / OR RENT IT OUT. -> THE RULE: (halftone) SEE THE SITE / BEFORE YOU PAY. over
+  real shots with "REAL SITE · FILMED 7 NOV 2026" (camera metadata) -> VANTA HOUSE + "MESSAGE US FOR A FREE SITE VISIT."
+  No John (owner: the video is about the building and the workers). The date tag goes only on untouched real clips.
