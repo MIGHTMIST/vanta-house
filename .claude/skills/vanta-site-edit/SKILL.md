@@ -79,11 +79,27 @@ riser into the burst, shutter on photos, pops on words - all quiet. Final -14 LU
 - Proof beats claims: real site, real workers, dated progress. AI-looking footage on proof videos is a bad pairing.
 - His best TikTok lost most viewers at 0:02 -> the first 2 seconds must already show the best thing.
 
-## 8. AI version (Gemini Omni Flash)
-He wants a second version with AI camera angles/moves on the real footage ("like a big film crew"), Google Gemini
-Omni Flash at 720p (cheaper), without changing the building. Status 16 Nov: the auto-mode permission check blocks
-sending footage to outside AI APIs (fal, Gemini). Needs his permission rule + his key via the secure credential
-form (never in chat). Spending credits needs his yes.
+## 8. AI version (camera moves made by AI on the real footage)
+He wants a second version with AI camera angles/moves on the real footage ("like a big film crew"), without changing
+the building. This session cannot send footage to outside AI APIs (permission check), so: write a full prompt
+(`handoff/AI_CAMERA_MOVES_PROMPT.md`), he runs it in his browser (Cowork) chat, then brings the results back for review.
+How the first round went (15 Nov): the browser chat used fal.ai MiniMax H3 Max image-to-video (not Gemini), 480x832,
+24 fps, 4.5-5.2 s, about $2.20 for 14 tries. Files in Drive folder 1ZYZefhNMUZ_K4jFBdepz-AoSv2hUBeLC as
+`AI_OUT_Axx_minimax_*.mp4` + `AI_OUT_REPORT_minimax.txt`.
+Review + cut method (keep doing it this way):
+- Download with the Drive connector `download_file_content` (it saves the video to a file); files the other chat made
+  are private, so the plain drive.usercontent URL returns a login page.
+- `scripts/aisheet.py`: real source frame + 9 AI frames per clip, flicker and sharpness numbers. Then full-size frames
+  for faces, hands, made-up building parts. Only take a clip if the move adds something the code pan cannot.
+- Geometry: MiniMax kept the picture exactly (scale 2/3, 10 px cut top and bottom, no stretch): ORB + affine check.
+- AI clips came out ~3 % darker and lose 30-50 % detail by their end. `scripts/bake_ai.py`: FSRCNN x2 (OpenCV
+  dnn_superres, model from GitHub; Hugging Face is blocked) -> 1108x1920 -> crop 1080, brightness matched to the
+  source, sharpening that grows as the clip goes soft. Version A itself is a 1.78x upscale (608 px crops), so the gap
+  is only ~1.3x.
+- `scripts/render8.py` = render7 timeline + `ai=(clip, start, speed)` on chosen beats. Speeds: buildings/props 1.9-2.4x
+  (fast move on the beat), people 1.0-1.25x (1.25x = one AI frame per output frame, no in-between frames), end shot
+  0.62x with optical-flow in-betweens. Sky masks on AI frames: `scripts/aisky.py` (blue, flat, not green net).
+- Same sound mix as Version A (same cuts), the AI soundtrack is never used.
 
 ## 9. Pipeline (scripts in `scripts/`, paths point at the 15 Nov scratchpad: change `R`/`S` first)
 `grade.py` (clean/grade), `v2core.py` + `fillcore.py` (decode, flow slow-mo, full-res crops), `fx2.py` (text, neon,
@@ -128,3 +144,13 @@ reflections); R27 anime edit (cinema crop, typed words, cuts on action).
   9:16 source clips `AI_SRC_A01..A12` in Drive folder 1ZYZefhNMUZ_K4jFBdepz-AoSv2hUBeLC (made by `prep_ai.py`).
   Results come back as `AI_OUT_A..` + `AI_OUT_REPORT.txt`; review every frame for warping/added people before use,
   then cut Version B with the same render7 timeline (swap the matching beats).
+- 15 Nov (Version B, render8): kept A01 A02 A03 A06 A07 A08 A10 A11(0-3.5 s) A12; dropped A04 (soft city, made-up
+  palms), A05 and A09 (moves too small to beat the real shot). Moves that ADD picture at the edges (pull-back, crane
+  "reveal") invent building parts: use only the part that stays near the real frame.
+- 15 Nov: the grey + hi-vis look broke on the AI vest (its orange came out at hue 0-4, outside the 5-45 range) -> grey
+  camouflage patches. `selective2` in render8 (also very bright, saturated red-orange; holes filled) - only on AI shots,
+  because it tints sunny bricks on real shots.
+- 15 Nov: QA MISSED a full worker face in Version A at 2.6-3.3 s (GV3A9994 0.2-0.64, crop cx .36-.42: the worker
+  looks into the lens). The Sonnet rating said "face: no". Fix: same shot framed on the right worker (cx .80-.86).
+  Rule: in QA, look at EVERY worker shot at full size for faces, not only the 2-fps sheet, and never trust a helper's
+  "no face".

@@ -75,7 +75,7 @@ def full(k0, k1, src, **o): SH.append(dict(kind='full', k0=k0, k1=k1, src=src, *
 full(-0.548, 1, ('GV3A9982', 1.8, 6.5), cx=(0.27, 0.34), sp=0.55)                    # HOOK: worker walks to the tower (back only)
 full(1, 2, ('GV3A0029', 0.0, 3.4), cx=(0.30, 0.36), sp=0.6)                           # two workers at the rebar
 full(2, 3, ('GV3A0017', 0.0, 2.1), cx=(0.44, 0.50), sp=0.6)                           # two men laying blocks
-full(3, 4, ('GV3A9994', 0.2, 2.0), cx=(0.36, 0.42), sp=0.6)                           # rebar machine
+full(3, 4, ('GV3A9994', 0.2, 2.0), cx=(0.80, 0.86), sp=0.6)                           # rebar machine (no face)
 full(4, 5, ('GV3A0008', 0.0, 3.5), cx=(0.42, 0.42), sp=0.6, push=0.06)                # forest of props, looking up
 full(5, 8, ('GV3A9991', 2.4, 5.2), cx=(0.38, 0.44), sp=0.45, flash=True, title=True, reveal=True)  # building, floor by floor + name
 full(8, 9, ('GV3A0032', 0.0, 3.3), cx=(0.62, 0.74), sp=0.6, tag=True)                 # Kampala skyline: where it is
