@@ -200,3 +200,8 @@ reflections); R27 anime edit (cinema crop, typed words, cuts on action).
   - YOU CHOOSE / YOUR FLOOR. - LIVE IN IT / OR RENT IT OUT. -> THE RULE: (halftone) SEE THE SITE / BEFORE YOU PAY. over
   real shots with "REAL SITE · FILMED 7 NOV 2026" (camera metadata) -> VANTA HOUSE + "MESSAGE US FOR A FREE SITE VISIT."
   No John (owner: the video is about the building and the workers). The date tag goes only on untouched real clips.
+- 15 Nov: asked to choose ONE of the four round-4 videos, I picked OFF-PLAN because it is the only one that passes the
+  marketing skill's rules end to end: the hook names the buyer + promise, dated real proof, one belief moved ("see the
+  site before you pay"), and it ends with a free thing + contact step (free site visit, message us). Cheap next step
+  (kaleidoscope remix): the same end card on the CREW loop. The same 4 refs (N1-N4) were re-sent: md5 identical, no
+  new study needed; check md5 before re-studying a re-sent file.
