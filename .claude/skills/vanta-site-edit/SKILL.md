@@ -154,3 +154,22 @@ reflections); R27 anime edit (cinema crop, typed words, cuts on action).
   looks into the lens). The Sonnet rating said "face: no". Fix: same shot framed on the right worker (cx .80-.86).
   Rule: in QA, look at EVERY worker shot at full size for faces, not only the 2-fps sheet, and never trust a helper's
   "no face".
+- 15 Nov (3-video set, `scripts/render9.py`, VID=v1|v2|v3, `sfx9.py`, `finish9.sh`): the owner said one video crammed too
+  much ("fit every image so the pacing is okay") -> MAX THREE videos, all on the same song, calmer pacing (2 beats a
+  shot in the verses), the footage shared out: v1 THE CREW (workers), v2 THE BUILDING (AI camera moves), v3 THE PHOTOS
+  (all 14 owner photos, each with time). His song for these: the long version of the train song from his lyric video
+  (`refs4/SONG.mp4` audio): beat B(k)=0.244+0.723k, intro build 0-11.8 (strobe 4.2-6.1, 9.9-11.8), lines at 12.0-17.2 /
+  23.6-28.6 / 35.2-39.0 / 39.4-45.6 ("I think I wrecked it" never on screen), music ends 46.0 (TikTok jingle 46.1) ->
+  cut on beat 63 (45.79) + boom, END 47.0. First beat is at 0.244 s: the hook shot must own frame 0 (SH[0]['t0']=0).
+- 15 Nov: HIS FAVOURITE TEXT LOOK = the "ON SITE" card: Inter Black, brand teal, scale pop 1.15->1 + fade, then a light
+  glint sweeps across (fx2.shine), over the halftone sepia freeze. He wants ALL words like that ("that font, the way it
+  shines"), appearing word by word as sung like his lyric video. Teal needs a dark soft backing on green net / sky.
+  Exception: VANTA HOUSE behind the tower stays white (teal disappears on the blue-teal sky).
+- 15 Nov: new tricks from his Spider-Man refs (N1-N4) that fit our footage: stacked big words beside the subject landing
+  one per beat (BRICK / BY BRICK.), photo stutter-flash (2 frames on the beat), black breath (0.36 s) before drops,
+  strips landing 4 frames apart, echo trail on a walking worker, soft light streak, photo slam (tilt + scale settle).
+- 15 Nov: the grade's local contrast mottles flat skies (painted look) -> `sky_clean` in render9: smooth inside open sky
+  only, averaging sky pixels only (no halo), thin things in the sky protected (a mast got erased by plain blur).
+- 15 Nov: strips that land a beat apart leave half the screen black for over a second: never; always 4 frames apart.
+  Soft/smeared shots to avoid: GV3A0020 0.6-2 (camera moving), GV3A0035 0-2.6 (fast worker motion blur);
+  GV3A9982 12-18 has a small worker facing the camera.
